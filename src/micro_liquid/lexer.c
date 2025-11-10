@@ -6,6 +6,7 @@ static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self);
 static ML_Token *ML_Lexer_lex_other(ML_Lexer *self);
 static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote);
 static ML_Token *ML_Lexer_lex_whitespace_control(ML_Lexer *self);
+static ML_Token *ML_Lexer_lex_end_of_expr(ML_Lexer *self);
 
 static inline Py_UCS4 ML_Lexer_peek(ML_Lexer *self);
 
@@ -68,7 +69,7 @@ ML_Token *ML_Lexer_next(ML_Lexer *self)
     if (self->pos >= length)
         return ML_Token_new(length, length, TOK_EOF);
 
-    // TODO: branchless jump table
+    // TODO: branchless jump table?
 
     switch (ML_StateStack_pop(&self->state))
     {
@@ -83,9 +84,7 @@ ML_Token *ML_Lexer_next(ML_Lexer *self)
     case STATE_WC:
         return ML_Lexer_lex_whitespace_control(self);
     default:
-        // TODO: never fail, return TOK_ERR or TOK_UNKNOWN, let the parser
-        // handle error messages
-        // TODO: set python exception message
+        PyErr_SetString(PyExc_ValueError, "unknown lexer state");
         return NULL;
     }
 }
@@ -224,12 +223,20 @@ static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self)
         self->pos++;
         return ML_Token_new(start, self->pos, TOK_R_PAREN);
     case '-':
-        // Negative integer
         self->pos++;
         if (!ML_Lexer_accept_while(self->str, &self->pos, is_ascii_digit))
         {
-            return ML_Token_new(start, self->pos, TOK_UNKNOWN);
+            return ML_Token_new(start, self->pos, TOK_WC_HYPHEN);
         }
+        // Negative integer
+        return ML_Token_new(start, self->pos, TOK_INT);
+    case '~':
+        self->pos++;
+        return ML_Token_new(start, self->pos, TOK_WC_TILDE);
+    }
+
+    if (ML_Lexer_accept_while(self->str, &self->pos, is_ascii_digit))
+    {
         return ML_Token_new(start, self->pos, TOK_INT);
     }
 
@@ -260,23 +267,7 @@ static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self)
         return ML_Token_new(start, self->pos, TOK_WORD);
     }
 
-    // TODO: whitespace control
-    // TODO: accept_end_delim
-
-    if (ML_Lexer_accept_str(self->str, &self->pos, "%}"))
-    {
-        ML_StateStack_pop(&self->state);
-        return ML_Token_new(start, self->pos, TOK_TAG_END);
-    }
-
-    if (ML_Lexer_accept_str(self->str, &self->pos, "}}"))
-    {
-        ML_StateStack_pop(&self->state);
-        return ML_Token_new(start, self->pos, TOK_OUT_END);
-    }
-
-    self->pos++;
-    return ML_Token_new(start, self->pos, TOK_UNKNOWN);
+    return ML_Lexer_lex_end_of_expr(self);
 }
 
 static ML_Token *ML_Lexer_lex_whitespace_control(ML_Lexer *self)
@@ -293,8 +284,7 @@ static ML_Token *ML_Lexer_lex_whitespace_control(ML_Lexer *self)
         return ML_Token_new(start, self->pos, TOK_WC_TILDE);
     }
 
-    // TODO: set exception message
-    return NULL;
+    return NULL; // unreachable
 }
 
 static ML_Token *ML_Lexer_lex_other(ML_Lexer *self)
@@ -316,9 +306,67 @@ static ML_Token *ML_Lexer_lex_other(ML_Lexer *self)
     return ML_Token_new(start, self->pos, TOK_OTHER);
 }
 
+static ML_Token *ML_Lexer_lex_end_of_expr(ML_Lexer *self)
+{
+    Py_ssize_t start = self->pos;
+
+    if (ML_Lexer_accept_str(self->str, &self->pos, "%}"))
+    {
+        ML_StateStack_pop(&self->state);
+        return ML_Token_new(start, self->pos, TOK_TAG_END);
+    }
+
+    if (ML_Lexer_accept_str(self->str, &self->pos, "}}"))
+    {
+        ML_StateStack_pop(&self->state);
+        return ML_Token_new(start, self->pos, TOK_OUT_END);
+    }
+
+    self->pos++;
+    return ML_Token_new(start, self->pos, TOK_UNKNOWN);
+}
+
+static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)
+{
+    Py_ssize_t start = self->pos;
+    Py_UCS4 ch = PyUnicode_ReadChar(self->str, self->pos);
+
+    if (ch == quote)
+    {
+        // Empty string
+        self->pos++;
+        return ML_Token_new(start, start,
+                            quote == '\'' ? TOK_SINGLE_QUOTE_STRING
+                                          : TOK_DOUBLE_QUOTE_STRING);
+    }
+
+    for (;;)
+    {
+        ch = PyUnicode_ReadChar(self->str, self->pos);
+
+        if (ch == '\\')
+        {
+            self->pos++;
+            // TODO: unescape
+        }
+        else if (ch == quote)
+        {
+            self->pos++;
+            return ML_Token_new(start, self->pos - 1,
+                                quote == '\'' ? TOK_SINGLE_QUOTE_STRING
+                                              : TOK_DOUBLE_QUOTE_STRING);
+        }
+        else if (ch == -1)
+        {
+            // end of input
+            // unclosed string literal
+            return ML_Token_new(start, self->pos, TOK_ERROR);
+        }
+    }
+}
+
 static inline Py_UCS4 ML_Lexer_peek(ML_Lexer *self)
 {
-    // TODO: check for end of input.
     return PyUnicode_ReadChar(self->str, self->pos);
 }
 

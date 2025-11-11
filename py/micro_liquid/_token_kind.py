@@ -12,6 +12,8 @@ class TokenKind(IntEnum):
     TOK_INT = auto()
     TOK_SINGLE_QUOTE_STRING = auto()
     TOK_DOUBLE_QUOTE_STRING = auto()
+    TOK_SINGLE_ESC_STRING = auto()
+    TOK_DOUBLE_ESC_STRING = auto()
     TOK_WORD = auto()
     TOK_IF_TAG = auto()
     TOK_ELIF_TAG = auto()

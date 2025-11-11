@@ -330,14 +330,14 @@ static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)
 {
     Py_ssize_t start = self->pos;
     Py_UCS4 ch = PyUnicode_ReadChar(self->str, self->pos);
+    ML_TokenKind kind =
+        quote == '\'' ? TOK_SINGLE_QUOTE_STRING : TOK_DOUBLE_QUOTE_STRING;
 
     if (ch == quote)
     {
         // Empty string
         self->pos++;
-        return ML_Token_new(start, start,
-                            quote == '\'' ? TOK_SINGLE_QUOTE_STRING
-                                          : TOK_DOUBLE_QUOTE_STRING);
+        return ML_Token_new(start, start, kind);
     }
 
     for (;;)
@@ -347,14 +347,13 @@ static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)
         if (ch == '\\')
         {
             self->pos++;
-            // TODO: unescape
+            kind =
+                quote == '\'' ? TOK_SINGLE_ESC_STRING : TOK_DOUBLE_ESC_STRING;
         }
         else if (ch == quote)
         {
             self->pos++;
-            return ML_Token_new(start, self->pos - 1,
-                                quote == '\'' ? TOK_SINGLE_QUOTE_STRING
-                                              : TOK_DOUBLE_QUOTE_STRING);
+            return ML_Token_new(start, self->pos - 1, kind);
         }
         else if (ch == (Py_UCS4)-1)
         {

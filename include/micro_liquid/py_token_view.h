@@ -3,6 +3,9 @@
 
 #include <Python.h>
 
+/**
+ * A convenient Python type exposing tokens for testing.
+ */
 typedef struct
 {
     PyObject_HEAD PyObject *source;

@@ -255,4 +255,37 @@ def test_double_quoted_string_literal() -> None:
         assert want == got
 
 
-# TODO: test escape sequences in string literals
+def test_single_quoted_string_literal_with_escapes() -> None:
+    text = r"Hello {{ 'yo\\u' }}!"
+    tokens = tokenize(text)
+
+    expect: list[_T] = [
+        _T(Kind.TOK_OTHER, "Hello "),
+        _T(Kind.TOK_OUT_START, "{{"),
+        _T(Kind.TOK_SINGLE_ESC_STRING, r"yo\\u"),
+        _T(Kind.TOK_OUT_END, "}}"),
+        _T(Kind.TOK_OTHER, "!"),
+        _T(Kind.TOK_EOF, ""),
+    ]
+
+    assert len(tokens) == len(expect)
+    for want, got in zip(expect, tokens):
+        assert want == got
+
+
+def test_double_quoted_string_literal_with_escapes() -> None:
+    text = r'Hello {{ "yo\\u" }}!'
+    tokens = tokenize(text)
+
+    expect: list[_T] = [
+        _T(Kind.TOK_OTHER, "Hello "),
+        _T(Kind.TOK_OUT_START, "{{"),
+        _T(Kind.TOK_DOUBLE_ESC_STRING, r"yo\\u"),
+        _T(Kind.TOK_OUT_END, "}}"),
+        _T(Kind.TOK_OTHER, "!"),
+        _T(Kind.TOK_EOF, ""),
+    ]
+
+    assert len(tokens) == len(expect)
+    for want, got in zip(expect, tokens):
+        assert want == got

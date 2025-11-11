@@ -356,7 +356,7 @@ static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)
                                 quote == '\'' ? TOK_SINGLE_QUOTE_STRING
                                               : TOK_DOUBLE_QUOTE_STRING);
         }
-        else if (ch == -1)
+        else if (ch == (Py_UCS4)-1)
         {
             // end of input
             // unclosed string literal

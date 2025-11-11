@@ -157,9 +157,9 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
 
 static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self)
 {
-    Py_ssize_t start = self->pos;
-
     ML_StateStack_push(&self->state, STATE_EXPR);
+    ML_Lexer_accept_while(self->str, &self->pos, is_space_char);
+    Py_ssize_t start = self->pos;
 
     if (ML_Lexer_accept_keyword(self->str, &self->pos, "if", 2))
     {
@@ -252,12 +252,12 @@ static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self)
 
     if (ML_Lexer_accept_keyword(self->str, &self->pos, "not", 3))
     {
-        return ML_Token_new(start, self->pos, TOK_OR);
+        return ML_Token_new(start, self->pos, TOK_NOT);
     }
 
     if (ML_Lexer_accept_keyword(self->str, &self->pos, "in", 2))
     {
-        return ML_Token_new(start, self->pos, TOK_OR);
+        return ML_Token_new(start, self->pos, TOK_IN);
     }
 
     if (is_word_char_first(ch))
@@ -362,7 +362,11 @@ static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)
             // unclosed string literal
             return ML_Token_new(start, self->pos, TOK_ERROR);
         }
+
+        self->pos++;
     }
+
+    return ML_Token_new(start, self->pos, TOK_ERROR);
 }
 
 static inline Py_UCS4 ML_Lexer_peek(ML_Lexer *self)

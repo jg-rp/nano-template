@@ -1,5 +1,4 @@
 #include "micro_liquid/node.h"
-#include "micro_liquid/context.h"
 
 /**
  * Render `node` to `buf` in the given render context `ctx`.
@@ -21,6 +20,56 @@ static RenderFn render_table[] = {
     [NODE_FOR_TAG] = render_for_tag,
     [NODE_TEXT] = render_text,
 };
+
+/**
+ * Return a new node.
+ *
+ * Pass `NULL` for `children`, `expr` and/or `name` if the node has no children,
+ * expression or name.
+ *
+ * The new node owns `children`, `expr` and `name`, each of which will be freed
+ * by `ML_Node_destroy`.
+ */
+ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
+                     Py_ssize_t child_count, ML_Expression *expr,
+                     PyObject *name)
+{
+    ML_Node *node = PyMem_Malloc(sizeof(ML_Node));
+    if (!node)
+        return NULL;
+
+    node->kind = kind;
+    node->children = children;
+    node->child_count = child_count;
+    node->expr = expr;
+    node->name = name;
+    return node;
+}
+
+void ML_Node_destroy(ML_Node *self)
+{
+    if (!self)
+        return;
+
+    // Recursively destroy nodes.
+    if (self->children)
+    {
+        for (Py_ssize_t i = 0; i < self->child_count; i++)
+        {
+            if (self->children[i])
+                ML_Node_destroy(self->children[i]);
+        }
+        PyMem_Free(self->children);
+    }
+
+    if (self->expr)
+    {
+        ML_Expression_destroy(self->expr);
+    }
+
+    Py_XDECREF(self->name);
+    PyMem_Free(self);
+}
 
 bool ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf)
 {

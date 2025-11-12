@@ -98,6 +98,8 @@ static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
     return token;
 }
 
+// TODO: ML_Token_destroy for symmetry
+
 static PyObject *ML_Token_text(ML_Token *span, PyObject *str)
 {
     return PyUnicode_Substring(str, span->start, span->end);

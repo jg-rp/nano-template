@@ -23,6 +23,15 @@ typedef struct ML_Node
     PyObject *name; // str | None
 } ML_Node;
 
+/**
+ * Return a new node.
+ *
+ * The new node takes ownership of `children`, `expr` and `name`, all of which
+ * will be freed by `ML_Node_destroy`.
+ *
+ * Pass `NULL` for `children`, `expr` and/or `name` if the node has no children,
+ * expression or name.
+ */
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expression *expr,
                      PyObject *name);

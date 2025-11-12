@@ -92,7 +92,7 @@ static PyType_Spec TokenView_spec = {
     .slots = TokenView_slots,
 };
 
-int MLPY_TokenView_register_type(PyObject *module)
+int register_token_view_type(PyObject *module)
 {
     PyObject *type_obj = PyType_FromSpec(&TokenView_spec);
     if (!type_obj)

@@ -21,7 +21,7 @@ PyMODINIT_FUNC PyInit__micro_liquid(void)
     if (!mod)
         return NULL;
 
-    if (MLPY_TokenView_register_type(mod) < 0)
+    if (register_token_view_type(mod) < 0)
     {
         Py_DECREF(mod);
         return NULL;

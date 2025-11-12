@@ -13,7 +13,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     ML_Token **tokens = ML_Lexer_scan(lexer, &token_count);
     if (!tokens)
     {
-        ML_Lexer_delete(lexer);
+        ML_Lexer_destroy(lexer);
         return NULL;
     }
 
@@ -40,7 +40,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     }
 
     PyMem_Free(tokens);
-    ML_Lexer_delete(lexer);
+    ML_Lexer_destroy(lexer);
     return list;
 
 fail:
@@ -53,7 +53,7 @@ fail:
         }
         PyMem_Free(tokens);
     }
-    ML_Lexer_delete(lexer);
+    ML_Lexer_destroy(lexer);
     Py_XDECREF(list);
     return NULL;
 }

@@ -52,7 +52,7 @@ ML_Lexer *ML_Lexer_new(PyObject *str)
     return lexer;
 }
 
-void ML_Lexer_delete(ML_Lexer *self)
+void ML_Lexer_destroy(ML_Lexer *self)
 {
     Py_XDECREF(self->str);
     ML_StateStack_clear(&self->state);

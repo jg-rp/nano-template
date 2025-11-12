@@ -8,6 +8,8 @@
  *
  * This is use for testing our C lexer from Python. It's unlikely to be useful
  * elsewhere.
+ *
+ * @param self Python module
  */
 PyObject *tokenize(PyObject *self, PyObject *str);
 

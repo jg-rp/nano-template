@@ -18,6 +18,6 @@ PyObject *MLPY_TokenView_new(PyObject *source, Py_ssize_t start, Py_ssize_t end,
                              int kind);
 
 /* Initialization: adds TokenView type to the module */
-int MLPY_TokenView_register_type(PyObject *module);
+int register_token_view_type(PyObject *module);
 
 #endif

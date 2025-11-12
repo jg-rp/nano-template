@@ -20,21 +20,21 @@ typedef struct ML_Node
     struct ML_Node **children;
     Py_ssize_t child_count;
     ML_Expression *expr;
-    PyObject *name; // str | None
+    PyObject *str;
 } ML_Node;
 
 /**
  * Return a new node.
  *
- * The new node takes ownership of `children`, `expr` and `name`, all of which
+ * The new node takes ownership of `children`, `expr` and `str`, all of which
  * will be freed by `ML_Node_destroy`.
  *
- * Pass `NULL` for `children`, `expr` and/or `name` if the node has no children,
- * expression or name.
+ * Pass `NULL` for `children`, `expr` and/or `str` if the node has no children,
+ * expression or associated string.
  */
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expression *expr,
-                     PyObject *name);
+                     PyObject *str);
 
 void ML_Node_destroy(ML_Node *self);
 bool ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf);

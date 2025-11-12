@@ -21,28 +21,21 @@ static RenderFn render_table[] = {
     [NODE_TEXT] = render_text,
 };
 
-/**
- * Return a new node.
- *
- * Pass `NULL` for `children`, `expr` and/or `name` if the node has no children,
- * expression or name.
- *
- * The new node owns `children`, `expr` and `name`, each of which will be freed
- * by `ML_Node_destroy`.
- */
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
-                     Py_ssize_t child_count, ML_Expression *expr,
-                     PyObject *name)
+                     Py_ssize_t child_count, ML_Expression *expr, PyObject *str)
 {
     ML_Node *node = PyMem_Malloc(sizeof(ML_Node));
     if (!node)
         return NULL;
 
+    if (str)
+        Py_INCREF(str);
+
     node->kind = kind;
     node->children = children;
     node->child_count = child_count;
     node->expr = expr;
-    node->name = name;
+    node->str = str;
     return node;
 }
 
@@ -67,7 +60,7 @@ void ML_Node_destroy(ML_Node *self)
         ML_Expression_destroy(self->expr);
     }
 
-    Py_XDECREF(self->name);
+    Py_XDECREF(self->str);
     PyMem_Free(self);
 }
 

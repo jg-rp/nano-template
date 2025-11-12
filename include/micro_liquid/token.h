@@ -88,7 +88,7 @@ typedef struct ML_Token
 static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
                                      ML_TokenKind kind)
 {
-    ML_Token *token = PyMem_Malloc(sizeof(ML_Token));
+    ML_Token *token = (ML_Token *)PyMem_Malloc(sizeof(ML_Token));
     if (!token)
         return NULL;
 

@@ -105,4 +105,12 @@ static PyObject *ML_Token_text(ML_Token *span, PyObject *str)
     return PyUnicode_Substring(str, span->start, span->end);
 }
 
+// Assumes number of tokens is less than 32 or 64.
+typedef Py_ssize_t ML_TokenMask;
+
+static inline bool ML_Token_mask_test(ML_TokenKind kind, ML_TokenMask mask)
+{
+    return (mask & ((Py_ssize_t)1 << kind)) != 0;
+}
+
 #endif

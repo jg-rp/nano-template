@@ -9,6 +9,7 @@
 typedef struct ML_Parser
 {
     PyObject *str;
+    Py_ssize_t length;
     ML_Token **tokens;
     Py_ssize_t token_count;
     Py_ssize_t pos;
@@ -19,6 +20,6 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
                          Py_ssize_t token_count);
 
 void ML_Parser_destroy(ML_Parser *self);
-ML_Node **ML_Parser_parse(ML_Parser *self);
+ML_Node **ML_Parser_parse(ML_Parser *self, ML_TokenMask end);
 
 #endif

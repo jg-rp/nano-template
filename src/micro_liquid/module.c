@@ -2,6 +2,11 @@
 #include "micro_liquid/py_tokenize.h"
 #include <Python.h>
 
+typedef struct
+{
+    PyObject *ParseError;
+} ModuleState;
+
 static PyMethodDef micro_liquid_methods[] = {
     {"tokenize", tokenize, METH_O,
      PyDoc_STR("tokenize(str) -> list[TokenView]")},

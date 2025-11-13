@@ -91,6 +91,7 @@ ML_Node **ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
 
     for (;;)
     {
+        // TODO: declare these above
         ML_Token *token = ML_Parser_next(self);
         ML_TokenKind kind = token->kind;
         ML_Token *peeked = ML_Parser_peek(self);
@@ -114,6 +115,7 @@ ML_Node **ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
             NodeList_append(nodes, node);
             break;
         case TOK_TAG_START:
+            // TODO: we can safely consume tag name token here
             // Skip whitespace control and update peeked.
             if (ML_Token_mask_test(peeked->kind, _WHITESPACE_CONTROL))
             {

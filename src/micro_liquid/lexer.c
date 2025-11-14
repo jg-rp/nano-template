@@ -41,8 +41,12 @@ static inline bool is_word_char(Py_UCS4 ch);
 ML_Lexer *ML_Lexer_new(PyObject *str)
 {
     ML_Lexer *lexer = PyMem_Malloc(sizeof(ML_Lexer));
+
     if (!lexer)
+    {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     Py_INCREF(str);
     lexer->str = str;
@@ -93,10 +97,13 @@ ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
 {
     Py_ssize_t capacity = 128;
     Py_ssize_t token_count = 0;
-
     ML_Token **tokens = PyMem_Malloc(capacity * sizeof(ML_Token));
+
     if (!tokens)
+    {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     for (;;)
     {

@@ -5,7 +5,8 @@
 
 typedef enum
 {
-    TOK_WC_HYPHEN = 1,
+    TOK_WC_NONE = 1,
+    TOK_WC_HYPHEN,
     TOK_WC_TILDE,
     TOK_OUT_START,
     TOK_TAG_START,
@@ -39,6 +40,7 @@ typedef enum
 } ML_TokenKind;
 
 static const char *ML_TokenKind_names[] = {
+    [TOK_WC_NONE] = "TOK_WC_NONE",
     [TOK_WC_HYPHEN] = "TOK_WC_HYPHEN",
     [TOK_WC_TILDE] = "TOK_WC_TILDE",
     [TOK_OUT_START] = "TOK_OUT_START",
@@ -71,7 +73,7 @@ static const char *ML_TokenKind_names[] = {
     [TOK_UNKNOWN] = "TOK_UNKNOWN",
     [TOK_EOF] = "TOK_EOF"};
 
-static inline const char *ML_TokenKind_to_string(ML_TokenKind kind)
+static inline const char *ML_TokenKind_str(ML_TokenKind kind)
 {
     if (kind >= TOK_WC_HYPHEN && kind <= TOK_EOF)
         return ML_TokenKind_names[kind];
@@ -89,8 +91,12 @@ static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
                                      ML_TokenKind kind)
 {
     ML_Token *token = (ML_Token *)PyMem_Malloc(sizeof(ML_Token));
+
     if (!token)
+    {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     token->start = start;
     token->end = end;
@@ -100,9 +106,9 @@ static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
 
 // TODO: ML_Token_destroy for symmetry
 
-static PyObject *ML_Token_text(ML_Token *span, PyObject *str)
+static PyObject *ML_Token_text(ML_Token *self, PyObject *str)
 {
-    return PyUnicode_Substring(str, span->start, span->end);
+    return PyUnicode_Substring(str, self->start, self->end);
 }
 
 // Assumes number of tokens is less than 32 or 64.

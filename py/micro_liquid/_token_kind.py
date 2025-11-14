@@ -3,6 +3,7 @@ from enum import auto
 
 
 class TokenKind(IntEnum):
+    TOK_WC_NONE = auto()
     TOK_WC_HYPHEN = auto()
     TOK_WC_TILDE = auto()
     TOK_OUT_START = auto()

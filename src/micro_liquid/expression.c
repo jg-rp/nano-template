@@ -6,8 +6,12 @@ ML_Expression *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
                                  PyObject **path, Py_ssize_t segment_count)
 {
     ML_Expression *expr = PyMem_Malloc(sizeof(ML_Expression));
+
     if (!expr)
+    {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     expr->kind = kind;
     expr->token = token;

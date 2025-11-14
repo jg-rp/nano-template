@@ -25,8 +25,12 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expression *expr, PyObject *str)
 {
     ML_Node *node = PyMem_Malloc(sizeof(ML_Node));
+
     if (!node)
+    {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     if (str)
         Py_INCREF(str);

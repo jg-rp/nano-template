@@ -64,9 +64,8 @@ static PyObject *TokenView_repr(PyObject *self)
         PyUnicode_Substring(_self->source, _self->start, _self->end);
     if (!text)
         return NULL;
-    PyObject *repr =
-        PyUnicode_FromFormat("<TokenView kind=%s, text=%R>",
-                             ML_TokenKind_to_string(_self->kind), text);
+    PyObject *repr = PyUnicode_FromFormat("<TokenView kind=%s, text=%R>",
+                                          ML_TokenKind_str(_self->kind), text);
     Py_DECREF(text);
     return repr;
 }

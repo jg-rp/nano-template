@@ -10,7 +10,8 @@ typedef enum
     NODE_OUPUT,
     NODE_IF_TAG,
     NODE_FOR_TAG,
-    NODE_BLOCK,
+    NODE_IF_BLOCK,
+    NODE_FOR_BLOCK,
     NODE_TEXT
 } ML_NodeKind;
 

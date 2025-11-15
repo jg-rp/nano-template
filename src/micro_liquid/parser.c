@@ -4,6 +4,9 @@
 /// Set a RuntimeError and return NULL.
 static void *parser_error(ML_Token *token, const char *fmt, ...);
 
+/// Advance the parser if the current token is a whitespace control token.
+static void ML_Parser_skip_wc(ML_Parser *self);
+
 /// Consume and store a whitespace control token for use by the next text block.
 static void ML_Parser_carry_wc(ML_Parser *self);
 
@@ -23,8 +26,13 @@ static inline ML_Token *ML_Parser_peek(ML_Parser *self);
 /// Return the token on success. Set a RuntimeError and return NULL on failure.
 static inline ML_Token *ML_Parser_eat(ML_Parser *self, ML_TokenKind kind);
 
+/// Return true if we're at the start of a tag with kind in `end`.
+static inline bool ML_Parser_end_block(ML_Parser *self, ML_TokenMask end);
+
 /// Node parsing methods.
+static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token);
 static ML_Node *ML_Parser_parse_output(ML_Parser *self);
+static ML_Node *ML_Parser_parse_tag(ML_Parser *self);
 static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self);
 static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self);
 
@@ -37,11 +45,19 @@ static PyObject *ML_Parser_parse_identifier(ML_Parser *self);
 static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self);
 static PyObject *ML_Parser_parse_shorthand_path_selector(ML_Parser *self);
 
-// Helpers for building an array of nodes.
+// Helpers for building arrays of nodes.
 static ML_NodeList *ML_NodeList_new(void);
+static void ML_NodeList_destroy(ML_NodeList *self);
 static int ML_NodeList_grow(ML_NodeList *self);
 static int ML_NodeList_append(ML_NodeList *self, ML_Node *node);
-static int ML_NodeList_extend(ML_NodeList *self, ML_NodeList *nodes);
+
+// TODO: Generalized append only list?
+
+// Helpers for building arrays of expressions.
+static ML_ExprList *ML_ExprList_new(void);
+static void ML_ExprList_destroy(ML_ExprList *self);
+static int ML_ExprList_grow(ML_ExprList *self);
+static int ML_ExprList_append(ML_ExprList *self, ML_Expression *node);
 
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
                                         ((Py_ssize_t)1 << TOK_ELIF_TAG) |
@@ -52,6 +68,11 @@ static const ML_TokenMask END_FOR_MASK =
 
 static const ML_TokenMask WHITESPACE_CONTROL_MASK =
     ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE);
+
+static const ML_TokenMask TERMINATE_EXPR_MASK =
+    ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE) |
+    ((Py_ssize_t)1 << TOK_OUT_END) | ((Py_ssize_t)1 << TOK_TAG_END) |
+    ((Py_ssize_t)1 << TOK_OTHER) | ((Py_ssize_t)1 << TOK_EOF);
 
 ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
                          Py_ssize_t token_count)
@@ -102,77 +123,45 @@ ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
     if (!nodes)
         return NULL;
 
-    ML_Token *token;
-    ML_TokenKind kind;
-    ML_Token *peeked;
-    PyObject *str = NULL;
-    ML_Node *node = NULL;
-
     for (;;)
     {
-        token = ML_Parser_next(self);
-        kind = token->kind;
-        peeked = ML_Parser_peek(self);
+        ML_Token *token = ML_Parser_next(self);
+        ML_Node *node = NULL;
 
-        switch (kind)
+        switch (token->kind)
         {
         case TOK_OTHER:
-            str = ML_Token_text(token, self->str);
-            if (!str)
-                return NULL;
-            if (ML_NodeList_append(
-                    nodes, ML_Node_new(NODE_TEXT, NULL, 0, NULL, str)) < 0)
-                return NULL;
+            node = ML_Parser_parse_text(self, token);
             break;
+
         case TOK_OUT_START:
-            if (ML_Token_mask_test(peeked->kind, WHITESPACE_CONTROL_MASK))
-                self->pos++;
             node = ML_Parser_parse_output(self);
-            if (!node)
-                return NULL;
-            if (ML_NodeList_append(nodes, node) < 0)
-                return NULL;
             break;
+
         case TOK_TAG_START:
-            // TODO: we can safely consume tag name token here
-            // Skip whitespace control and update peeked.
-            if (ML_Token_mask_test(peeked->kind, WHITESPACE_CONTROL_MASK))
-            {
-                self->pos++;
-                peeked = ML_Parser_peek(self);
-            }
-
-            // Stop if at end of block.
-            if (ML_Token_mask_test(peeked->kind, end))
-            {
-                // Backtrack whitespace control.
-                if (ML_Token_mask_test(ML_Parser_current(self)->kind,
-                                       WHITESPACE_CONTROL_MASK))
-                    self->pos--;
+            // Stop if we're at the end of a block.
+            if (ML_Parser_end_block(self, end))
                 return nodes;
-            }
 
-            if (peeked->kind == TOK_IF_TAG)
-                node = ML_Parser_parse_if_tag(self);
-            else if (peeked->kind == TOK_FOR_TAG)
-                node = ML_Parser_parse_for_tag(self);
-            else
-                return parser_error(peeked, "unexpected token '%s'",
-                                    ML_TokenKind_str(peeked->kind));
-
-            if (!node)
-                return NULL;
-
-            if (ML_NodeList_append(nodes, node) < 0)
-                return NULL;
+            node = ML_Parser_parse_tag(self);
             break;
+
         case TOK_EOF:
             return nodes;
+
         default:
-            return parser_error(peeked, "unexpected token '%s'",
-                                ML_TokenKind_str(token->kind));
+            parser_error(token, "unexpected '%s'",
+                         ML_TokenKind_str(token->kind));
+            goto fail;
         }
+
+        if (!node || ML_NodeList_append(nodes, node) < 0)
+            goto fail;
     }
+
+fail:
+    ML_NodeList_destroy(nodes);
+    return NULL;
 }
 
 static inline ML_Token *ML_Parser_next(ML_Parser *self)
@@ -225,8 +214,29 @@ static void ML_Parser_carry_wc(ML_Parser *self)
         self->whitespace_carry = TOK_WC_NONE;
 }
 
+static void ML_Parser_skip_wc(ML_Parser *self)
+{
+    ML_Token *token = ML_Parser_current(self);
+    if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+        self->pos++;
+}
+
+static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
+{
+    PyObject *str = ML_Token_text(token, self->str);
+    if (!str)
+        return NULL;
+
+    ML_Node *node = ML_Node_new(NODE_TEXT, NULL, 0, NULL, str);
+    if (!node)
+        return NULL;
+
+    return node;
+}
+
 static ML_Node *ML_Parser_parse_output(ML_Parser *self)
 {
+    ML_Parser_skip_wc(self);
     ML_Expression *expr = ML_Parser_parse_primary(self);
     if (!expr)
         return NULL;
@@ -237,6 +247,75 @@ static ML_Node *ML_Parser_parse_output(ML_Parser *self)
         return NULL;
 
     return ML_Node_new(NODE_OUPUT, NULL, 0, expr, NULL);
+}
+
+static ML_Node *ML_Parser_parse_tag(ML_Parser *self)
+{
+    ML_Parser_skip_wc(self);
+    ML_Token *token = ML_Parser_next(self);
+
+    switch (token->kind)
+    {
+    case TOK_IF_TAG:
+        return ML_Parser_parse_if_tag(self);
+    case TOK_FOR_TAG:
+        return ML_Parser_parse_for_tag(self);
+    default:
+        return parser_error(token, "unexpected token '%s'",
+                            ML_TokenKind_str(token->kind));
+    }
+}
+
+static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
+{
+    ML_Expression *expr = NULL;
+    ML_NodeList *block = NULL;
+    ML_Node *node = NULL;
+
+    ML_NodeList *nodes = ML_NodeList_new();
+    if (!nodes)
+        return NULL;
+
+    ML_Token *token = ML_Parser_current(self);
+
+    // Assumes TOK_IF_TAG has already been consumed.
+    if (ML_Token_mask_test(token->kind, TERMINATE_EXPR_MASK))
+        return parser_error(token, "expected an expression");
+
+    // TODO: wrap me in BooleanExpression
+    expr = ML_Parser_parse_primary(self);
+    if (!expr)
+        return NULL;
+
+    ML_Parser_carry_wc(self);
+    if (!ML_Parser_eat(self, TOK_TAG_END))
+        return NULL;
+
+    block = ML_Parser_parse(self, END_IF_MASK);
+    if (!block)
+        goto fail;
+
+    node = ML_Node_new(NODE_IF_BLOCK, block->items, block->size, expr, NULL);
+    if (!node)
+        goto fail;
+
+    if (ML_NodeList_append(nodes, node) < 0)
+        goto fail;
+
+    // TODO: while TOK_ELIF_TAG ...
+
+    // TODO: if TOK_ELSE_TAG ...
+
+fail:
+    if (expr)
+        ML_Expression_destroy(expr);
+    if (nodes)
+        ML_NodeList_destroy(nodes);
+    if (block)
+        ML_NodeList_destroy(block);
+    if (node)
+        ML_Node_destroy(node);
+    return NULL;
 }
 
 static void *parser_error(ML_Token *token, const char *fmt, ...)
@@ -309,6 +388,17 @@ static ML_NodeList *ML_NodeList_new(void)
     return list;
 }
 
+static void ML_NodeList_destroy(ML_NodeList *self)
+{
+    for (Py_ssize_t i = 0; i < self->size; i++)
+    {
+        if (self->items[i])
+            ML_Node_destroy(self->items[i]);
+    }
+    PyMem_Free(self->items);
+    PyMem_Free(self);
+}
+
 static int ML_NodeList_grow(ML_NodeList *self)
 {
     size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
@@ -337,12 +427,63 @@ static int ML_NodeList_append(ML_NodeList *self, ML_Node *node)
     return 0;
 }
 
-static int ML_NodeList_extend(ML_NodeList *self, ML_NodeList *other)
+static ML_ExprList *ML_ExprList_new(void)
 {
-    for (size_t i = 0; i < other->size; i++)
+    ML_ExprList *list = PyMem_Malloc(sizeof(ML_ExprList));
+    if (!list)
     {
-        if (ML_NodeList_append(self, other->items[i]) != 0)
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    list->size = 0;
+    list->capacity = 4;
+    list->items = PyMem_Malloc(sizeof(ML_Expression *) * list->capacity);
+    if (!list->items)
+    {
+        PyErr_NoMemory();
+        PyMem_Free(list);
+        return NULL;
+    }
+
+    return list;
+}
+
+static void ML_ExprList_destroy(ML_ExprList *self)
+{
+    for (Py_ssize_t i = 0; i < self->size; i++)
+    {
+        if (self->items[i])
+            ML_Expression_destroy(self->items[i]);
+    }
+    PyMem_Free(self->items);
+    PyMem_Free(self);
+}
+
+static int ML_ExprList_grow(ML_ExprList *self)
+{
+    size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+    ML_Expression **new_items =
+        PyMem_Realloc(self->items, sizeof(ML_Expression *) * new_cap);
+    if (!new_items)
+    {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    self->items = new_items;
+    self->capacity = new_cap;
+    return 0;
+}
+
+static int ML_ExprList_append(ML_ExprList *self, ML_Expression *expr)
+{
+    if (self->size == self->capacity)
+    {
+        if (ML_ExprList_grow(self) != 0)
             return -1;
     }
+
+    self->items[self->size++] = expr;
     return 0;
 }

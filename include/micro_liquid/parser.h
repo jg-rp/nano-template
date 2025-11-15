@@ -2,6 +2,7 @@
 #define ML_PARSER_H
 
 #include "micro_liquid/common.h"
+#include "micro_liquid/expression.h"
 #include "micro_liquid/lexer.h"
 #include "micro_liquid/node.h"
 #include "micro_liquid/token.h"
@@ -12,6 +13,13 @@ typedef struct ML_NodeList
     size_t size;
     size_t capacity;
 } ML_NodeList;
+
+typedef struct ML_ExprList
+{
+    ML_Expression **items;
+    size_t size;
+    size_t capacity;
+} ML_ExprList;
 
 typedef struct ML_Parser
 {

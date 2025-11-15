@@ -5,26 +5,38 @@
 static void *parser_error(ML_Token *token, const char *fmt, ...);
 
 /// Advance the parser if the current token is a whitespace control token.
-static void ML_Parser_skip_wc(ML_Parser *self);
+static inline void ML_Parser_skip_wc(ML_Parser *self);
 
 /// Consume and store a whitespace control token for use by the next text block.
-static void ML_Parser_carry_wc(ML_Parser *self);
+static inline void ML_Parser_carry_wc(ML_Parser *self);
 
-/// Return the token at `self->pos` and advance the position. Keep returning
+/// Return the token at `self->pos` and advance position. Keep returning
 /// TOK_EOF if there are no more tokens.
 static inline ML_Token *ML_Parser_next(ML_Parser *self);
 
-/// Return the token at `self->pos` without advancing the position.
+/// Return the token at `self->pos` without advancing position.
 static inline ML_Token *ML_Parser_current(ML_Parser *self);
 
 /// Return the token at `self->pos + 1`.
 static inline ML_Token *ML_Parser_peek(ML_Parser *self);
+
+/// Return the token at `self->pos + n`.
+static inline ML_Token *ML_Parser_peek_n(ML_Parser *self, Py_ssize_t n);
 
 /// Assert that the token at `self->pos` is of kind `kind` and advance the
 /// position.
 ///
 /// Return the token on success. Set a RuntimeError and return NULL on failure.
 static inline ML_Token *ML_Parser_eat(ML_Parser *self, ML_TokenKind kind);
+
+/// Consume TOK_TAG_START -> kind -> TOK_TAG_END with optional whitespace
+/// control.
+///
+/// Set and exception and return NULL if we're not at a tag of kind `kind`.
+static ML_Token *ML_Parser_eat_empty_tag(ML_Parser *self, ML_TokenKind kind);
+
+/// Return true if we're at the start of a tag with kind `kind`.
+static inline bool ML_Parser_tag(ML_Parser *self, ML_TokenKind kind);
 
 /// Return true if we're at the start of a tag with kind in `end`.
 static inline bool ML_Parser_end_block(ML_Parser *self, ML_TokenMask end);
@@ -191,10 +203,19 @@ static inline ML_Token *ML_Parser_peek(ML_Parser *self)
     return self->tokens[self->pos + 1];
 }
 
+static inline ML_Token *ML_Parser_peek_n(ML_Parser *self, Py_ssize_t n)
+{
+    if (self->pos + n >= self->length)
+        // Last token is always EOF
+        return self->tokens[self->length - 1];
+
+    return self->tokens[self->pos + n];
+}
+
 static inline ML_Token *ML_Parser_eat(ML_Parser *self, ML_TokenKind kind)
 {
     ML_Token *token = ML_Parser_next(self);
-    if (token->kind == kind)
+    if (token->kind != kind)
         return parser_error(token, "expected %s, found %s",
                             ML_TokenKind_str(kind),
                             ML_TokenKind_str(token->kind));
@@ -202,7 +223,53 @@ static inline ML_Token *ML_Parser_eat(ML_Parser *self, ML_TokenKind kind)
     return token;
 }
 
-static void ML_Parser_carry_wc(ML_Parser *self)
+static ML_Token *ML_Parser_eat_empty_tag(ML_Parser *self, ML_TokenKind kind)
+{
+    if (!ML_Parser_eat(self, TOK_TAG_START))
+        return NULL;
+    ML_Parser_skip_wc(self);
+    ML_Token *token = ML_Parser_eat(self, kind);
+    if (!token)
+        return NULL;
+    ML_Parser_carry_wc(self);
+    if (!ML_Parser_eat(self, TOK_TAG_END))
+        return NULL;
+    return token;
+}
+
+static inline bool ML_Parser_tag(ML_Parser *self, ML_TokenKind kind)
+{
+    // Assumes we're at TOK_TAG_START.
+    ML_Token *token = ML_Parser_peek(self);
+
+    if (token->kind == kind)
+        return true;
+
+    if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+        return ML_Parser_peek_n(self, 2)->kind == kind;
+
+    return false;
+}
+
+static inline bool ML_Parser_end_block(ML_Parser *self, ML_TokenMask end)
+{
+    // Assumes TOK_TAG_START has been consumed.
+    ML_Token *token = ML_Parser_current(self);
+
+    if (ML_Token_mask_test(token->kind, end))
+        return true;
+
+    if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+    {
+        token = ML_Parser_peek(self);
+        if (ML_Token_mask_test(token->kind, end))
+            return true;
+    }
+
+    return false;
+}
+
+static inline void ML_Parser_carry_wc(ML_Parser *self)
 {
     ML_Token *token = ML_Parser_current(self);
     if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
@@ -214,7 +281,7 @@ static void ML_Parser_carry_wc(ML_Parser *self)
         self->whitespace_carry = TOK_WC_NONE;
 }
 
-static void ML_Parser_skip_wc(ML_Parser *self)
+static inline void ML_Parser_skip_wc(ML_Parser *self)
 {
     ML_Token *token = ML_Parser_current(self);
     if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
@@ -223,6 +290,7 @@ static void ML_Parser_skip_wc(ML_Parser *self)
 
 static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
 {
+    // TODO: trim
     PyObject *str = ML_Token_text(token, self->str);
     if (!str)
         return NULL;
@@ -282,7 +350,6 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     if (ML_Token_mask_test(token->kind, TERMINATE_EXPR_MASK))
         return parser_error(token, "expected an expression");
 
-    // TODO: wrap me in BooleanExpression
     expr = ML_Parser_parse_primary(self);
     if (!expr)
         return NULL;
@@ -302,9 +369,60 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     if (ML_NodeList_append(nodes, node) < 0)
         goto fail;
 
-    // TODO: while TOK_ELIF_TAG ...
+    while (ML_Parser_tag(self, TOK_ELIF_TAG))
+    {
+        ML_Parser_eat(self, TOK_TAG_START);
+        ML_Parser_skip_wc(self);
+        ML_Parser_eat(self, TOK_ELIF_TAG);
 
-    // TODO: if TOK_ELSE_TAG ...
+        if (ML_Token_mask_test(token->kind, TERMINATE_EXPR_MASK))
+            return parser_error(token, "expected an expression");
+
+        expr = ML_Parser_parse_primary(self);
+        if (!expr)
+            goto fail;
+
+        ML_Parser_carry_wc(self);
+        ML_Parser_eat(self, TOK_TAG_END);
+
+        block = ML_Parser_parse(self, END_IF_MASK);
+        if (!block)
+            goto fail;
+
+        node =
+            ML_Node_new(NODE_ELIF_BLOCK, block->items, block->size, expr, NULL);
+
+        if (!node)
+            goto fail;
+
+        if (ML_NodeList_append(nodes, node) < 0)
+            goto fail;
+    }
+
+    if (ML_Parser_tag(self, TOK_ELSE_TAG))
+    {
+        ML_Parser_eat_empty_tag(self, TOK_ELSE_TAG);
+        block = ML_Parser_parse(self, END_IF_MASK);
+        if (!block)
+            goto fail;
+
+        node =
+            ML_Node_new(NODE_ELSE_BLOCK, block->items, block->size, NULL, NULL);
+
+        if (!node)
+            goto fail;
+
+        if (ML_NodeList_append(nodes, node) < 0)
+            goto fail;
+    }
+
+    node = ML_Node_new(NODE_IF_TAG, nodes->items, nodes->size, NULL, NULL);
+    if (!node)
+        goto fail;
+
+    PyMem_Free(block); // Children take ownership of block items.
+    PyMem_Free(nodes); // Node takes ownership of node list items.
+    return node;
 
 fail:
     if (expr)

@@ -12,6 +12,8 @@ typedef enum
     NODE_FOR_TAG,
     NODE_IF_BLOCK,
     NODE_FOR_BLOCK,
+    NODE_ELIF_BLOCK,
+    NODE_ELSE_BLOCK,
     NODE_TEXT
 } ML_NodeKind;
 

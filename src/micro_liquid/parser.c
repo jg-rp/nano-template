@@ -1,6 +1,17 @@
 #include "micro_liquid/parser.h"
 #include <stdarg.h>
 
+typedef enum
+{
+    PREC_LOWEST = 1,
+    PREC_OR,
+    PREC_AND,
+    PREC_PRE
+} Precedence;
+
+/// Return the precedence for the given token kind.
+static inline Precedence precedence(ML_TokenKind kind);
+
 /// Set a RuntimeError and return NULL.
 static void *parser_error(ML_Token *token, const char *fmt, ...);
 
@@ -54,9 +65,11 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self);
 static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self);
 
 // Expression parsing methods.
-static ML_Expression *ML_Parser_parse_primary(ML_Parser *self);
+static ML_Expression *ML_Parser_parse_primary(ML_Parser *self, Precedence prec);
 static ML_Expression *ML_Parser_parse_group(ML_Parser *self);
-static ML_Expression *ML_Parser_parse_infix_expression(ML_Parser *self);
+static ML_Expression *ML_Parser_parse_not(ML_Parser *self);
+static ML_Expression *ML_Parser_parse_infix_expression(ML_Parser *self,
+                                                       ML_Expression *left);
 static ML_Expression *ML_Parser_parse_path(ML_Parser *self);
 static PyObject *ML_Parser_parse_identifier(ML_Parser *self);
 static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self);
@@ -86,6 +99,9 @@ static const ML_TokenMask END_FOR_MASK =
 
 static const ML_TokenMask WHITESPACE_CONTROL_MASK =
     ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE);
+
+static const ML_TokenMask BIN_OP_MASK =
+    ((Py_ssize_t)1 << TOK_AND) | ((Py_ssize_t)1 << TOK_OR);
 
 static const ML_TokenMask TERMINATE_EXPR_MASK =
     ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE) |
@@ -307,6 +323,21 @@ static inline void ML_Parser_skip_wc(ML_Parser *self)
         self->pos++;
 }
 
+static inline Precedence precedence(ML_TokenKind kind)
+{
+    switch (kind)
+    {
+    case TOK_AND:
+        return PREC_AND;
+    case TOK_OR:
+        return PREC_OR;
+    case TOK_NOT:
+        return PREC_PRE;
+    default:
+        return PREC_LOWEST;
+    }
+}
+
 static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
 {
     // TODO: trim
@@ -324,7 +355,7 @@ static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
 static ML_Node *ML_Parser_parse_output(ML_Parser *self)
 {
     ML_Parser_skip_wc(self);
-    ML_Expression *expr = ML_Parser_parse_primary(self);
+    ML_Expression *expr = ML_Parser_parse_primary(self, PREC_LOWEST);
     if (!expr)
         return NULL;
 
@@ -367,7 +398,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     if (ML_Parser_expect_expression(self) < 0)
         goto fail;
 
-    expr = ML_Parser_parse_primary(self);
+    expr = ML_Parser_parse_primary(self, PREC_LOWEST);
     if (!expr)
         goto fail;
 
@@ -396,7 +427,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
         if (ML_Parser_expect_expression(self) < 0)
             goto fail;
 
-        expr = ML_Parser_parse_primary(self);
+        expr = ML_Parser_parse_primary(self, PREC_LOWEST);
         if (!expr)
             goto fail;
 
@@ -484,7 +515,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
     if (ML_Parser_expect_expression(self) < 0)
         goto fail;
 
-    expr = ML_Parser_parse_primary(self);
+    expr = ML_Parser_parse_primary(self, PREC_LOWEST);
     if (!expr)
         goto fail;
 
@@ -545,6 +576,70 @@ fail:
         ML_NodeList_destroy(nodes);
     if (node)
         ML_Node_destroy(node);
+    return NULL;
+}
+
+static ML_Expression *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
+{
+    ML_Expression *left = NULL;
+    ML_Token *token = ML_Parser_current(self);
+    ML_TokenKind kind = token->kind;
+
+    switch (kind)
+    {
+    case TOK_SINGLE_QUOTE_STRING:
+    case TOK_DOUBLE_QUOTE_STRING:
+        left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
+                                 ML_Token_text(token, self->str), NULL, 0);
+        break;
+    case TOK_SINGLE_ESC_STRING:
+    case TOK_DOUBLE_ESC_STRING:
+        // TODO: unescape
+        left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
+                                 ML_Token_text(token, self->str), NULL, 0);
+        break;
+    case TOK_L_PAREN:
+        left = ML_Parser_parse_group(self);
+        break;
+    case TOK_WORD:
+    case TOK_L_BRACKET:
+        left = ML_Parser_parse_path(self);
+        break;
+    case TOK_NOT:
+        left = ML_Parser_parse_not(self);
+        break;
+    default:
+        parser_error(token, "unexpected %s", ML_TokenKind_str(token->kind));
+    }
+
+    if (!left)
+        goto fail;
+
+    for (;;)
+    {
+        token = ML_Parser_current(self);
+        kind = token->kind;
+
+        if (kind == TOK_UNKNOWN) // TODO: TOK_ERR
+        {
+            parser_error(token, "unknown token");
+            goto fail;
+        }
+
+        if (kind == TOK_EOF || !ML_Token_mask_test(kind, BIN_OP_MASK) ||
+            precedence(kind) < prec)
+            break;
+
+        left = ML_Parser_parse_infix_expression(self, left);
+        if (!left)
+            goto fail;
+    }
+
+    return left;
+
+fail:
+    if (left)
+        ML_Expression_destroy(left);
     return NULL;
 }
 

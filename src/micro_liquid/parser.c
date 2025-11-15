@@ -137,6 +137,10 @@ ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
 
     for (;;)
     {
+        // Stop if we're at the end of a block.
+        if (ML_Parser_end_block(self, end))
+            return nodes;
+
         ML_Token *token = ML_Parser_next(self);
         ML_Node *node = NULL;
 
@@ -151,10 +155,6 @@ ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
             break;
 
         case TOK_TAG_START:
-            // Stop if we're at the end of a block.
-            if (ML_Parser_end_block(self, end))
-                return nodes;
-
             node = ML_Parser_parse_tag(self);
             break;
 
@@ -253,15 +253,15 @@ static inline bool ML_Parser_tag(ML_Parser *self, ML_TokenKind kind)
 
 static inline bool ML_Parser_end_block(ML_Parser *self, ML_TokenMask end)
 {
-    // Assumes TOK_TAG_START has been consumed.
-    ML_Token *token = ML_Parser_current(self);
+    // Assumes we're at TOK_TAG_START.
+    ML_Token *token = ML_Parser_peek(self);
 
     if (ML_Token_mask_test(token->kind, end))
         return true;
 
     if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        token = ML_Parser_peek(self);
+        token = ML_Parser_peek_n(self, 2);
         if (ML_Token_mask_test(token->kind, end))
             return true;
     }

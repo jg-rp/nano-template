@@ -1,11 +1,11 @@
 #include "micro_liquid/expression.h"
 
-ML_Expression *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
-                                 ML_Expression **children,
-                                 Py_ssize_t child_count, PyObject *str,
-                                 PyObject **path, Py_ssize_t segment_count)
+ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
+                           ML_Expr **children, Py_ssize_t child_count,
+                           PyObject *str, PyObject **path,
+                           Py_ssize_t segment_count)
 {
-    ML_Expression *expr = PyMem_Malloc(sizeof(ML_Expression));
+    ML_Expr *expr = PyMem_Malloc(sizeof(ML_Expr));
 
     if (!expr)
     {
@@ -23,7 +23,7 @@ ML_Expression *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
     return expr;
 }
 
-void ML_Expression_destroy(ML_Expression *self)
+void ML_Expression_destroy(ML_Expr *self)
 {
     if (!self)
         return;
@@ -55,4 +55,4 @@ void ML_Expression_destroy(ML_Expression *self)
     PyMem_Free(self);
 }
 
-// TODO: PyObject *ML_Expression_evaluate(ML_Expression *self, ML_Context *ctx);
+// TODO: PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx);

@@ -21,8 +21,11 @@ static RenderFn render_table[] = {
     [NODE_TEXT] = render_text,
 };
 
+/// Return a new node.
+///
+/// If `str` is not NULL, steal a reference to it.
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
-                     Py_ssize_t child_count, ML_Expression *expr, PyObject *str)
+                     Py_ssize_t child_count, ML_Expr *expr, PyObject *str)
 {
     ML_Node *node = PyMem_Malloc(sizeof(ML_Node));
 
@@ -31,9 +34,6 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
         PyErr_NoMemory();
         return NULL;
     }
-
-    if (str)
-        Py_INCREF(str);
 
     node->kind = kind;
     node->children = children;

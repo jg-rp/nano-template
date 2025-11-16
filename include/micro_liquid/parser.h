@@ -14,13 +14,6 @@ typedef struct ML_NodeList
     size_t capacity;
 } ML_NodeList;
 
-typedef struct ML_ExprList
-{
-    ML_Expression **items;
-    size_t size;
-    size_t capacity;
-} ML_ExprList;
-
 typedef struct ML_ObjList
 {
     PyObject **items;

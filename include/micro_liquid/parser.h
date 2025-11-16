@@ -21,6 +21,13 @@ typedef struct ML_ExprList
     size_t capacity;
 } ML_ExprList;
 
+typedef struct ML_ObjList
+{
+    PyObject **items;
+    size_t size;
+    size_t capacity;
+} ML_ObjList;
+
 typedef struct ML_Parser
 {
     PyObject *str;

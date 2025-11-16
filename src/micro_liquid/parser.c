@@ -89,6 +89,12 @@ static void ML_ExprList_destroy(ML_ExprList *self);
 static Py_ssize_t ML_ExprList_grow(ML_ExprList *self);
 static Py_ssize_t ML_ExprList_append(ML_ExprList *self, ML_Expression *node);
 
+// Helpers for building arrays of PyObject*.
+static ML_ObjList *ML_ObjList_new(void);
+static void ML_ObjList_destroy(ML_ObjList *self);
+static Py_ssize_t ML_ObjList_grow(ML_ObjList *self);
+static Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj);
+
 // Bit masks for testing ML_TokenKind membership.
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
                                         ((Py_ssize_t)1 << TOK_ELIF_TAG) |
@@ -107,6 +113,9 @@ static const ML_TokenMask TERMINATE_EXPR_MASK =
     ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE) |
     ((Py_ssize_t)1 << TOK_OUT_END) | ((Py_ssize_t)1 << TOK_TAG_END) |
     ((Py_ssize_t)1 << TOK_OTHER) | ((Py_ssize_t)1 << TOK_EOF);
+
+static const ML_TokenMask PATH_PUNCTUATION_MASK =
+    ((Py_ssize_t)1 << TOK_DOT) | ((Py_ssize_t)1 << TOK_L_BRACKET);
 
 ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
                          Py_ssize_t token_count)
@@ -130,10 +139,6 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
 
 void ML_Parser_destroy(ML_Parser *self)
 {
-    // Some expressions steal a token, so we don't want to free those here.
-    // Whenever a token is stolen, it must be replaced with NULL in
-    // `self->tokens`.
-
     ML_Token **tokens = self->tokens;
     Py_ssize_t token_count = self->token_count;
 
@@ -420,9 +425,13 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     // Zero or more elif blocks.
     while (ML_Parser_tag(self, TOK_ELIF_TAG))
     {
-        ML_Parser_eat(self, TOK_TAG_START);
+        if (!ML_Parser_eat(self, TOK_TAG_START))
+            goto fail;
+
         ML_Parser_skip_wc(self);
-        ML_Parser_eat(self, TOK_ELIF_TAG);
+
+        if (!ML_Parser_eat(self, TOK_ELIF_TAG))
+            goto fail;
 
         if (ML_Parser_expect_expression(self) < 0)
             goto fail;
@@ -432,7 +441,9 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
 
         ML_Parser_carry_wc(self);
-        ML_Parser_eat(self, TOK_TAG_END);
+
+        if (!ML_Parser_eat(self, TOK_TAG_END))
+            goto fail;
 
         block = ML_Parser_parse(self, END_IF_MASK);
         if (!block)
@@ -511,7 +522,9 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
     if (!ident)
         goto fail;
 
-    ML_Parser_eat(self, TOK_IN);
+    if (!ML_Parser_eat(self, TOK_IN))
+        goto fail;
+
     if (ML_Parser_expect_expression(self) < 0)
         goto fail;
 
@@ -520,7 +533,9 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
         goto fail;
 
     ML_Parser_carry_wc(self);
-    ML_Parser_eat(self, TOK_TAG_END);
+
+    if (!ML_Parser_eat(self, TOK_TAG_END))
+        goto fail;
 
     block = ML_Parser_parse(self, END_FOR_MASK);
     if (!block)
@@ -589,12 +604,14 @@ static ML_Expression *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     {
     case TOK_SINGLE_QUOTE_STRING:
     case TOK_DOUBLE_QUOTE_STRING:
+        // XXX: check ML_Token_text return value is not NULL
         left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
                                  ML_Token_text(token, self->str), NULL, 0);
         break;
     case TOK_SINGLE_ESC_STRING:
     case TOK_DOUBLE_ESC_STRING:
         // TODO: unescape
+        // XXX: check ML_Token_text return value is not NULL
         left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
                                  ML_Token_text(token, self->str), NULL, 0);
         break;
@@ -640,6 +657,141 @@ static ML_Expression *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
 fail:
     if (left)
         ML_Expression_destroy(left);
+    return NULL;
+}
+
+static ML_Expression *ML_Parser_parse_group(ML_Parser *self)
+{
+    if (!ML_Parser_eat(self, TOK_L_PAREN))
+        return NULL;
+
+    ML_Expression *expr = ML_Parser_parse_primary(self, PREC_LOWEST);
+    if (!expr)
+        return NULL;
+
+    if (!ML_Parser_eat(self, TOK_R_PAREN))
+    {
+        ML_Expression_destroy(expr);
+        return NULL;
+    }
+
+    return expr;
+}
+
+static PyObject *ML_Parser_parse_identifier(ML_Parser *self)
+{
+    ML_Token *token = ML_Parser_eat(self, TOK_WORD);
+    if (ML_Token_mask_test(ML_Parser_current(self)->kind,
+                           PATH_PUNCTUATION_MASK))
+        return parser_error(token, "expected an identifier, found a path");
+    return ML_Token_text(token, self->str);
+}
+
+static ML_Expression *ML_Parser_parse_not(ML_Parser *self)
+{
+    if (!ML_Parser_eat(self, TOK_NOT))
+        return NULL;
+
+    ML_Expression *expr = ML_Parser_parse_primary(self, PREC_LOWEST);
+    if (!expr)
+        return NULL;
+
+    return ML_Expression_new(EXPR_NOT, NULL, &expr, 1, NULL, NULL, 0);
+}
+
+static ML_Expression *ML_Parser_parse_infix_expression(ML_Parser *self,
+                                                       ML_Expression *left)
+{
+    ML_Token *token = ML_Parser_next(self);
+    ML_TokenKind kind = token->kind;
+    Precedence prec = precedence(kind);
+    ML_Expression *right = ML_Parser_parse_primary(self, prec);
+    ML_Expression *expr = NULL;
+
+    if (!right)
+        ML_Expression_destroy(left);
+    return NULL;
+
+    ML_Expression *children[] = {left, right};
+
+    switch (kind)
+    {
+    case TOK_AND:
+        expr = ML_Expression_new(EXPR_AND, NULL, children, 2, NULL, NULL, 0);
+        break;
+    case TOK_OR:
+        expr = ML_Expression_new(EXPR_OR, NULL, children, 2, NULL, NULL, 0);
+        break;
+    default:
+        parser_error(token, "unexpected operator '%s'", ML_TokenKind_str(kind));
+    };
+
+    if (!expr)
+    {
+        ML_Expression_destroy(left);
+        ML_Expression_destroy(right);
+        return NULL;
+    }
+
+    return expr;
+}
+
+static ML_Expression *ML_Parser_parse_path(ML_Parser *self)
+{
+    ML_ObjList *segments = ML_ObjList_new();
+    if (!segments)
+        return NULL;
+
+    ML_Token *token = ML_Parser_current(self);
+    ML_TokenKind kind = token->kind;
+    PyObject *obj = NULL;
+
+    if (kind == TOK_WORD)
+    {
+        self->pos++;
+        PyObject *str = ML_Token_text(token, self->str);
+        if (!str)
+            goto fail;
+
+        if (ML_ObjList_append(segments, str) == -1)
+            goto fail;
+    }
+
+    for (;;)
+    {
+        kind = ML_Parser_next(self)->kind;
+        switch (kind)
+        {
+        case TOK_L_BRACKET:
+            obj = ML_Parser_parse_bracketed_path_segment(self);
+            break;
+        case TOK_DOT:
+            obj = ML_Parser_parse_shorthand_path_selector(self);
+            break;
+        default:
+            self->pos--;
+            ML_Expression *expr =
+                ML_Expression_new(EXPR_VAR, token, NULL, 0, NULL,
+                                  segments->items, segments->size);
+
+            if (!expr)
+                goto fail;
+
+            PyMem_Free(segments); // expr takes ownership of segment items.
+            return expr;
+        }
+
+        if (!obj)
+            goto fail;
+
+        if (ML_ObjList_append(segments, obj) == -1)
+            goto fail;
+    }
+
+fail:
+    if (segments)
+        ML_ObjList_destroy(segments);
+    Py_XDECREF(obj);
     return NULL;
 }
 
@@ -810,5 +962,67 @@ static Py_ssize_t ML_ExprList_append(ML_ExprList *self, ML_Expression *expr)
     }
 
     self->items[self->size++] = expr;
+    return 0;
+}
+
+static ML_ObjList *ML_ObjList_new(void)
+{
+    ML_ObjList *list = PyMem_Malloc(sizeof(ML_ObjList));
+    if (!list)
+    {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    list->size = 0;
+    list->capacity = 4;
+    list->items = PyMem_Malloc(sizeof(PyObject *) * list->capacity);
+    if (!list->items)
+    {
+        PyErr_NoMemory();
+        PyMem_Free(list);
+        return NULL;
+    }
+
+    return list;
+}
+
+static void ML_ObjList_destroy(ML_ObjList *self)
+{
+    for (Py_ssize_t i = 0; i < self->size; i++)
+    {
+        if (self->items[i])
+            Py_XDECREF(self->items[i]);
+    }
+    PyMem_Free(self->items);
+    PyMem_Free(self);
+}
+
+static Py_ssize_t ML_ObjList_grow(ML_ObjList *self)
+{
+    size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+    PyObject **new_items =
+        PyMem_Realloc(self->items, sizeof(PyObject *) * new_cap);
+    if (!new_items)
+    {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    self->items = new_items;
+    self->capacity = new_cap;
+    return 0;
+}
+
+static Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj)
+{
+    if (self->size == self->capacity)
+    {
+        if (ML_ObjList_grow(self) != 0)
+            return -1;
+    }
+
+    Py_INCREF(obj);
+    self->items[self->size++] = obj;
     return 0;
 }

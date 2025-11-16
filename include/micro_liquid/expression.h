@@ -15,7 +15,7 @@ typedef enum
     EXPR_VAR
 } ML_ExpressionKind;
 
-// TODO: void *data instead of "Used by"
+// TODO: void *data instead of "Used by.."?
 
 typedef struct ML_Expression
 {

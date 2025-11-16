@@ -3,6 +3,8 @@
 
 #include "micro_liquid/common.h"
 
+// TODO: replace `*stack` with `*self`.
+
 typedef enum
 {
     STATE_MARKUP = 1,

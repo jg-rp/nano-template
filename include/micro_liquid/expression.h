@@ -44,8 +44,4 @@ ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
 
 void ML_Expression_destroy(ML_Expr *self);
 
-/// Returns a new reference to the result of evaluating this expression in the
-/// given context.
-PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx);
-
 #endif

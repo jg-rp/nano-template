@@ -1,3 +1,4 @@
+#include "micro_liquid/py_template.h"
 #include "micro_liquid/py_token_view.h"
 #include "micro_liquid/py_tokenize.h"
 #include <Python.h>
@@ -6,6 +7,8 @@ typedef struct
 {
     PyObject *ParseError;
 } ModuleState;
+
+// TODO: parse(src, data, serializer, undefined)
 
 static PyMethodDef micro_liquid_methods[] = {
     {"tokenize", tokenize, METH_O,
@@ -26,7 +29,13 @@ PyMODINIT_FUNC PyInit__micro_liquid(void)
     if (!mod)
         return NULL;
 
-    if (register_token_view_type(mod) < 0)
+    if (ml_register_token_view_type(mod) < 0)
+    {
+        Py_DECREF(mod);
+        return NULL;
+    }
+
+    if (ml_register_template_type(mod) < 0)
     {
         Py_DECREF(mod);
         return NULL;

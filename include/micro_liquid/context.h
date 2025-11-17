@@ -32,7 +32,7 @@ PyObject *ML_Context_get(ML_Context *self, PyObject *key, ML_Token *token);
 /// @brief Extend scope with mapping `namespace`.
 /// A reference to `namespace` is stolen and DECREFed in `ML_Context_dealloc`.
 /// @return 0 on success, -1 on failure.
-Py_ssize_t ML_Context_push(ML_Context *self, PyObject *namespace);
+int ML_Context_push(ML_Context *self, PyObject *namespace);
 
 /// @brief Remove the namespace at the top of the scope stack.
 /// Decrement the reference count for the popped namespace.

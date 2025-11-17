@@ -1,11 +1,11 @@
 #include "micro_liquid/context.h"
 #include "micro_liquid/py_token_view.h"
 
-Py_ssize_t ML_Context_push(ML_Context *self, PyObject *namespace)
+int ML_Context_push(ML_Context *self, PyObject *namespace)
 {
     if (self->size >= self->capacity)
     {
-        size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+        Py_ssize_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
         PyObject **new_items =
             PyMem_Realloc(self->scope, sizeof(PyObject *) * new_cap);
         if (!new_items)

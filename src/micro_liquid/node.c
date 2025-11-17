@@ -1,18 +1,15 @@
 #include "micro_liquid/node.h"
 
-/**
- * Render `node` to `buf` in the given render context `ctx`.
- * @param buf list[str]
- */
-typedef bool (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+/// @brief Render `node` to `buf` in the given render context `ctx`.
+typedef int (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 
-static bool render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static bool render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static bool render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static bool render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static bool render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static bool render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                     ML_ObjList *buf);
+static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                    ML_ObjList *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -21,9 +18,6 @@ static RenderFn render_table[] = {
     [NODE_TEXT] = render_text,
 };
 
-/// Return a new node.
-///
-/// If `str` is not NULL, steal a reference to it.
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expr *expr, PyObject *str)
 {
@@ -43,7 +37,7 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
     return node;
 }
 
-void ML_Node_destroy(ML_Node *self)
+void ML_Node_dealloc(ML_Node *self)
 {
     if (!self)
         return;
@@ -54,7 +48,7 @@ void ML_Node_destroy(ML_Node *self)
         for (Py_ssize_t i = 0; i < self->child_count; i++)
         {
             if (self->children[i])
-                ML_Node_destroy(self->children[i]);
+                ML_Node_dealloc(self->children[i]);
         }
         PyMem_Free(self->children);
     }
@@ -68,14 +62,14 @@ void ML_Node_destroy(ML_Node *self)
     PyMem_Free(self);
 }
 
-bool ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
+int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!self)
-        return false;
+        return -1;
 
     RenderFn fn = render_table[self->kind];
 
     if (!fn)
-        return false;
+        return -1;
     return fn(self, ctx, buf);
 }

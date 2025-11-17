@@ -487,7 +487,7 @@ fail:
     if (block)
         ML_NodeList_destroy(block);
     if (node)
-        ML_Node_destroy(node);
+        ML_Node_dealloc(node);
     return NULL;
 }
 
@@ -577,7 +577,7 @@ fail:
     if (nodes)
         ML_NodeList_destroy(nodes);
     if (node)
-        ML_Node_destroy(node);
+        ML_Node_dealloc(node);
     return NULL;
 }
 
@@ -918,7 +918,7 @@ static void ML_NodeList_destroy(ML_NodeList *self)
     for (Py_ssize_t i = 0; i < self->size; i++)
     {
         if (self->items[i])
-            ML_Node_destroy(self->items[i]);
+            ML_Node_dealloc(self->items[i]);
     }
     PyMem_Free(self->items);
     PyMem_Free(self);

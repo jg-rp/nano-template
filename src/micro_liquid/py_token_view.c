@@ -12,60 +12,59 @@ PyObject *MLPY_TokenView_new(PyObject *source, Py_ssize_t start, Py_ssize_t end,
         return NULL;
     }
 
-    MLPY_TokenViewObject *_self =
+    MLPY_TokenViewObject *op =
         PyObject_New(MLPY_TokenViewObject, TokenView_TypeObject);
-    if (!_self)
+    if (!op)
         return NULL;
 
     Py_INCREF(source);
-    _self->source = source;
-    _self->start = start;
-    _self->end = end;
-    _self->kind = kind;
+    op->source = source;
+    op->start = start;
+    op->end = end;
+    op->kind = kind;
 
-    return (PyObject *)_self;
+    return (PyObject *)op;
 }
 
 static PyObject *TokenView_text(PyObject *self, void *Py_UNUSED(closure))
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    return PyUnicode_Substring(_self->source, _self->start, _self->end);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    return PyUnicode_Substring(op->source, op->start, op->end);
 }
 
 static PyObject *TokenView_kind(PyObject *self, void *Py_UNUSED(closure))
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    return PyLong_FromLong(_self->kind);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    return PyLong_FromLong(op->kind);
 }
 
 static PyObject *TokenView_start(PyObject *self, void *Py_UNUSED(closure))
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    return PyLong_FromSsize_t(_self->start);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    return PyLong_FromSsize_t(op->start);
 }
 
 static PyObject *TokenView_end(PyObject *self, void *Py_UNUSED(closure))
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    return PyLong_FromSsize_t(_self->end);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    return PyLong_FromSsize_t(op->end);
 }
 
 static void TokenView_dealloc(PyObject *self)
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    Py_XDECREF(_self->source);
-    PyObject_Free(_self);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    Py_XDECREF(op->source);
+    PyObject_Free(op);
 }
 
 static PyObject *TokenView_repr(PyObject *self)
 {
-    MLPY_TokenViewObject *_self = (MLPY_TokenViewObject *)self;
-    PyObject *text =
-        PyUnicode_Substring(_self->source, _self->start, _self->end);
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
+    PyObject *text = PyUnicode_Substring(op->source, op->start, op->end);
     if (!text)
         return NULL;
     PyObject *repr = PyUnicode_FromFormat("<TokenView kind=%s, text=%R>",
-                                          ML_TokenKind_str(_self->kind), text);
+                                          ML_TokenKind_str(op->kind), text);
     Py_DECREF(text);
     return repr;
 }
@@ -91,7 +90,7 @@ static PyType_Spec TokenView_spec = {
     .slots = TokenView_slots,
 };
 
-int register_token_view_type(PyObject *module)
+int ml_register_token_view_type(PyObject *module)
 {
     PyObject *type_obj = PyType_FromSpec(&TokenView_spec);
     if (!type_obj)

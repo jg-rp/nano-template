@@ -6,6 +6,7 @@
 #include "micro_liquid/expression.h"
 #include "micro_liquid/object_list.h"
 
+/// @brief AST node kinds.
 typedef enum
 {
     NODE_OUPUT,
@@ -18,6 +19,7 @@ typedef enum
     NODE_TEXT
 } ML_NodeKind;
 
+/// @brief Internal AST node.
 typedef struct ML_Node
 {
     ML_NodeKind kind;
@@ -27,24 +29,18 @@ typedef struct ML_Node
     PyObject *str;
 } ML_Node;
 
-/**
- * Return a new node.
- *
- * The new node takes ownership of `children` and `expr`, both of which will be
- * freed by `ML_Node_destroy`.
- *
- * A reference to `str` will be stolen and its reference count decremented by
- * ML_Node_destroy.
- *
- * Pass `NULL` for `children`, `expr` and/or `str` if the node has no children,
- * expression or associated string.
- */
+/// @brief Allocate and initialize a new ML_Node.
+/// Take ownership of `children` and `expr` and steal a reference to `str`.
+/// `children`, `expr` and/or `str` an be NULL if the node has no children,
+/// expression or associated string.
+/// @return Newly allocated ML_Node*, or NULL on memory error.
 ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expr *expr, PyObject *str);
 
-void ML_Node_destroy(ML_Node *self);
+void ML_Node_dealloc(ML_Node *self);
 
-// TODO: can render fail?
-bool ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
+/// @brief Render a node to `buf` with data from `ctx`.
+/// @return 0 on success, -1 on failure with a Python error set.
+int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
 
 #endif

@@ -33,9 +33,8 @@ ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
         return NULL;
     }
 
-    // TODO: defensively ensure `globals` is a mapping etc.?
-
     Py_INCREF(str);
+    Py_INCREF(globals);
     Py_INCREF(serializer);
     Py_INCREF(undefined);
 
@@ -44,12 +43,6 @@ ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
     ctx->capacity = 0;
     ctx->serializer = serializer;
     ctx->undefined = undefined;
-
-    if (globals)
-    {
-        Py_INCREF(globals);
-        ML_Context_push(ctx, globals);
-    }
 
     return ctx;
 }
@@ -109,7 +102,8 @@ fail:
     return NULL;
 }
 
-PyObject *ML_Context_pop(ML_Context *self)
+void ML_Context_pop(ML_Context *self)
 {
-    return self->size ? self->scope[--self->size] : NULL;
+    if (self->size > 0)
+        Py_DECREF(self->scope[--self->size]);
 }

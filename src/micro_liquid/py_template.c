@@ -5,12 +5,15 @@
 // TODO: Register with dummy return value
 // TODO:
 
-/**
- * Render a template.
- * @param globals Mapping[str, object]
- * @param serializer Callable[[object], str]
- * @param undefined Type[Undefined]
- */
+/// @brief Render template `self`
+/// @param self The template to render
+/// @param globals A Python mapping of strings to objects.
+///     `Mapping[str, object]`.
+/// @param serializer A Python callable used to stringify objects before writing
+///     them to the output buffer. `Callable[[object], str]`.
+/// @param undefined The Python object used when a variable can not be resolved.
+///     `Callable[[str, int, int, int], Undefined]`.
+/// @return The result of rendering template `self` as a Python string.
 PyObject *MLPY_Template_render(MLPY_TemplateObject *self, PyObject *globals,
                                PyObject *serializer, PyObject *undefined);
 

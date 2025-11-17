@@ -10,16 +10,9 @@
 typedef struct ML_NodeList
 {
     ML_Node **items;
-    size_t size;
-    size_t capacity;
+    Py_ssize_t size;
+    Py_ssize_t capacity;
 } ML_NodeList;
-
-typedef struct ML_ObjList
-{
-    PyObject **items;
-    size_t size;
-    size_t capacity;
-} ML_ObjList;
 
 typedef struct ML_Parser
 {

@@ -1,4 +1,5 @@
 #include "micro_liquid/parser.h"
+#include "micro_liquid/object_list.h"
 #include <stdarg.h>
 
 typedef enum
@@ -82,14 +83,6 @@ static Py_ssize_t ML_NodeList_grow(ML_NodeList *self);
 static Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node);
 
 // TODO: Generalized append only list?
-
-// Helpers for building arrays of PyObject*.
-static ML_ObjList *ML_ObjList_new(void);
-static void ML_ObjList_destroy(ML_ObjList *self);
-static void ML_ObjList_disown(ML_ObjList *self);
-static Py_ssize_t ML_ObjList_grow(ML_ObjList *self);
-/// Steals a reference to `obj`.
-static Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj);
 
 // Bit masks for testing ML_TokenKind membership.
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
@@ -961,71 +954,5 @@ static Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node)
     }
 
     self->items[self->size++] = node;
-    return 0;
-}
-
-static ML_ObjList *ML_ObjList_new(void)
-{
-    ML_ObjList *list = PyMem_Malloc(sizeof(ML_ObjList));
-    if (!list)
-    {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    list->size = 0;
-    list->capacity = 4;
-    list->items = PyMem_Malloc(sizeof(PyObject *) * list->capacity);
-    if (!list->items)
-    {
-        PyErr_NoMemory();
-        PyMem_Free(list);
-        return NULL;
-    }
-
-    return list;
-}
-
-static void ML_ObjList_destroy(ML_ObjList *self)
-{
-    for (Py_ssize_t i = 0; i < self->size; i++)
-    {
-        if (self->items[i])
-            Py_XDECREF(self->items[i]);
-    }
-    PyMem_Free(self->items);
-    PyMem_Free(self);
-}
-
-static void ML_ObjList_disown(ML_ObjList *self)
-{
-    PyMem_Free(self);
-}
-
-static Py_ssize_t ML_ObjList_grow(ML_ObjList *self)
-{
-    size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
-    PyObject **new_items =
-        PyMem_Realloc(self->items, sizeof(PyObject *) * new_cap);
-    if (!new_items)
-    {
-        PyErr_NoMemory();
-        return -1;
-    }
-
-    self->items = new_items;
-    self->capacity = new_cap;
-    return 0;
-}
-
-static Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj)
-{
-    if (self->size == self->capacity)
-    {
-        if (ML_ObjList_grow(self) != 0)
-            return -1;
-    }
-
-    self->items[self->size++] = obj;
     return 0;
 }

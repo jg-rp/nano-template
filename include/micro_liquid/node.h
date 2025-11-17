@@ -4,6 +4,7 @@
 #include "micro_liquid/common.h"
 #include "micro_liquid/context.h"
 #include "micro_liquid/expression.h"
+#include "micro_liquid/object_list.h"
 
 typedef enum
 {
@@ -42,6 +43,8 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
                      Py_ssize_t child_count, ML_Expr *expr, PyObject *str);
 
 void ML_Node_destroy(ML_Node *self);
-bool ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf);
+
+// TODO: can render fail?
+bool ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
 
 #endif

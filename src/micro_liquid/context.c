@@ -47,7 +47,7 @@ ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
     return ctx;
 }
 
-void ML_Context_destroy(ML_Context *self)
+void ML_Context_dealloc(ML_Context *self)
 {
     Py_XDECREF(self->str);
 

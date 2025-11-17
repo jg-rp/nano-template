@@ -6,7 +6,7 @@
 
 /// @brief Internal render context.
 /// Reference counts for all PyObject* will be incremented by ML_Context_new;
-/// ML_Context_destroy decrements.
+/// ML_Context_dealloc decrements.
 typedef struct ML_Context
 {
     PyObject *str;
@@ -22,7 +22,7 @@ typedef struct ML_Context
 ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
                            PyObject *serializer, PyObject *undefined);
 
-void ML_Context_destroy(ML_Context *self);
+void ML_Context_dealloc(ML_Context *self);
 
 /// @brief Lookup `key` in the current scope.
 /// @return A new reference, or NULL if `key` is not in scope or `key` is not a
@@ -30,7 +30,7 @@ void ML_Context_destroy(ML_Context *self);
 PyObject *ML_Context_get(ML_Context *self, PyObject *key, ML_Token *token);
 
 /// @brief Extend scope with mapping `namespace`.
-/// A reference to `namespace` is stolen and DECREFed in `ML_Context_destroy`.
+/// A reference to `namespace` is stolen and DECREFed in `ML_Context_dealloc`.
 /// @return 0 on success, -1 on failure.
 Py_ssize_t ML_Context_push(ML_Context *self, PyObject *namespace);
 

@@ -4,15 +4,15 @@
  * Render `node` to `buf` in the given render context `ctx`.
  * @param buf list[str]
  */
-typedef bool (*RenderFn)(ML_Node *node, ML_Context *ctx, PyObject *buf);
+typedef bool (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 
-static bool render_output(ML_Node *node, ML_Context *ctx, PyObject *buf);
-static bool render_if_tag(ML_Node *node, ML_Context *ctx, PyObject *buf);
-static bool render_for_tag(ML_Node *node, ML_Context *ctx, PyObject *buf);
-static bool render_text(ML_Node *node, ML_Context *ctx, PyObject *buf);
-static bool render_block(ML_Node *node, ML_Context *ctx, PyObject *buf);
+static bool render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static bool render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static bool render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static bool render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static bool render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 static bool render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                     PyObject *buf);
+                                     ML_ObjList *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -68,7 +68,7 @@ void ML_Node_destroy(ML_Node *self)
     PyMem_Free(self);
 }
 
-bool ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf)
+bool ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!self)
         return false;

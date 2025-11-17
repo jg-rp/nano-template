@@ -1,21 +1,48 @@
 #include "micro_liquid/py_template.h"
+#include "micro_liquid/context.h"
+#include "micro_liquid/object_list.h"
 
-// TODO:
-// TODO: Comments
-// TODO: Register with dummy return value
-// TODO:
+PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
+{
+    MLPY_TemplateObject *this = (MLPY_TemplateObject *)self;
+    PyObject *globals = NULL;
+    PyObject *serializer = NULL;
+    PyObject *undefined = NULL;
+    ML_Context *ctx = NULL;
+    ML_ObjList *buf = NULL;
+    PyObject *rv = NULL;
 
-/// @brief Render template `self`
-/// @param self The template to render
-/// @param globals A Python mapping of strings to objects.
-///     `Mapping[str, object]`.
-/// @param serializer A Python callable used to stringify objects before writing
-///     them to the output buffer. `Callable[[object], str]`.
-/// @param undefined The Python object used when a variable can not be resolved.
-///     `Callable[[str, int, int, int], Undefined]`.
-/// @return The result of rendering template `self` as a Python string.
-PyObject *MLPY_Template_render(MLPY_TemplateObject *self, PyObject *globals,
-                               PyObject *serializer, PyObject *undefined);
+    if (!PyArg_ParseTuple(args, "OOO", &globals, &serializer, &undefined))
+        return NULL;
 
-PyObject *MLPY_TemplateObject_new(PyObject **nodes, Py_ssize_t node_count);
-void MLPY_Object_dealloc(PyObject *self);
+    // TODO: validate arguments
+
+    ctx = ML_Context_new(this->str, globals, serializer, undefined);
+    if (!ctx)
+        goto fail;
+
+    buf = ML_ObjList_new();
+    if (!buf)
+        goto fail;
+
+    for (Py_ssize_t i = 0; i < this->node_count; i++)
+    {
+        ML_Node_render(this->nodes[i], ctx, buf);
+    }
+
+    rv = ML_ObjList_join(buf);
+    if (!rv)
+        goto fail;
+
+    ML_Context_dealloc(ctx);
+    ML_ObjList_destroy(buf);
+    return rv;
+
+fail:
+    if (ctx)
+        ML_Context_dealloc(ctx);
+    if (buf)
+        ML_ObjList_destroy(buf);
+    Py_XDECREF(rv);
+    return NULL;
+}

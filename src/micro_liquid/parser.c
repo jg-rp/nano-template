@@ -75,15 +75,6 @@ static PyObject *ML_Parser_parse_identifier(ML_Parser *self);
 static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self);
 static PyObject *ML_Parser_parse_shorthand_path_selector(ML_Parser *self);
 
-// Helpers for building arrays of nodes.
-static ML_NodeList *ML_NodeList_new(void);
-static void ML_NodeList_destroy(ML_NodeList *self);
-static void ML_NodeList_disown(ML_NodeList *self);
-static Py_ssize_t ML_NodeList_grow(ML_NodeList *self);
-static Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node);
-
-// TODO: Generalized append only list?
-
 // Bit masks for testing ML_TokenKind membership.
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
                                         ((Py_ssize_t)1 << TOK_ELIF_TAG) |
@@ -126,7 +117,7 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
     return parser;
 }
 
-void ML_Parser_destroy(ML_Parser *self)
+void ML_Parser_dealloc(ML_Parser *self)
 {
     ML_Token **tokens = self->tokens;
     Py_ssize_t token_count = self->token_count;
@@ -188,7 +179,7 @@ ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end)
     }
 
 fail:
-    ML_NodeList_destroy(nodes);
+    ML_NodeList_dealloc(nodes);
     return NULL;
 }
 
@@ -483,9 +474,9 @@ fail:
     if (expr)
         ML_Expression_destroy(expr);
     if (nodes)
-        ML_NodeList_destroy(nodes);
+        ML_NodeList_dealloc(nodes);
     if (block)
-        ML_NodeList_destroy(block);
+        ML_NodeList_dealloc(block);
     if (node)
         ML_Node_dealloc(node);
     return NULL;
@@ -573,9 +564,9 @@ fail:
     if (expr)
         ML_Expression_destroy(expr);
     if (block)
-        ML_NodeList_destroy(block);
+        ML_NodeList_dealloc(block);
     if (nodes)
-        ML_NodeList_destroy(nodes);
+        ML_NodeList_dealloc(nodes);
     if (node)
         ML_Node_dealloc(node);
     return NULL;
@@ -891,7 +882,7 @@ fail:
     return NULL;
 }
 
-static ML_NodeList *ML_NodeList_new(void)
+ML_NodeList *ML_NodeList_new(void)
 {
     ML_NodeList *list = PyMem_Malloc(sizeof(ML_NodeList));
     if (!list)
@@ -913,7 +904,7 @@ static ML_NodeList *ML_NodeList_new(void)
     return list;
 }
 
-static void ML_NodeList_destroy(ML_NodeList *self)
+void ML_NodeList_dealloc(ML_NodeList *self)
 {
     for (Py_ssize_t i = 0; i < self->size; i++)
     {
@@ -924,12 +915,12 @@ static void ML_NodeList_destroy(ML_NodeList *self)
     PyMem_Free(self);
 }
 
-static void ML_NodeList_disown(ML_NodeList *self)
+void ML_NodeList_disown(ML_NodeList *self)
 {
     PyMem_Free(self);
 }
 
-static Py_ssize_t ML_NodeList_grow(ML_NodeList *self)
+Py_ssize_t ML_NodeList_grow(ML_NodeList *self)
 {
     size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
     ML_Node **new_items =
@@ -945,7 +936,7 @@ static Py_ssize_t ML_NodeList_grow(ML_NodeList *self)
     return 0;
 }
 
-static Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node)
+Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node)
 {
     if (self->size == self->capacity)
     {

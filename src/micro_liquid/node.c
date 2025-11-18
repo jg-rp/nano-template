@@ -73,3 +73,34 @@ int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
         return -1;
     return fn(self, ctx, buf);
 }
+
+static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    PY_TODO_I();
+}
+
+static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    PY_TODO_I();
+}
+
+static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    PY_TODO_I();
+}
+
+static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    PY_TODO_I();
+}
+
+static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    PY_TODO_I();
+}
+
+static int render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                    ML_ObjList *buf)
+{
+    PY_TODO_I();
+}

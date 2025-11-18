@@ -1,16 +1,12 @@
 #ifndef MLPY_TOKENIZE_H
 #define MLPY_TOKENIZE_H
 
-#include <Python.h>
+#include "micro_liquid/common.h"
 
-/**
- * Tokenize `str`. Return a list of token view instances.
- *
- * This is use for testing our C lexer from Python. It's unlikely to be useful
- * elsewhere.
- *
- * @param self Python module
- */
+/// @brief Tokenize `str`. Used for testing.
+/// @param src A Python string.
+/// @return A new reference to a list of ML_TokenView instances, or NULL on
+/// error with an exception set.
 PyObject *tokenize(PyObject *self, PyObject *str);
 
 #endif

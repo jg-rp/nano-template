@@ -4,7 +4,7 @@
 
 static PyTypeObject *Template_TypeObject = NULL;
 
-static void MLPY_Template_dealloc(PyObject *self)
+void MLPY_Template_dealloc(PyObject *self)
 {
     MLPY_Template *op = PyObject_New(MLPY_Template, Template_TypeObject);
 
@@ -15,8 +15,8 @@ static void MLPY_Template_dealloc(PyObject *self)
     PyMem_Free(op);
 }
 
-static PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
-                                   Py_ssize_t node_count)
+PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
+                            Py_ssize_t node_count)
 {
 
     if (!Template_TypeObject)
@@ -57,7 +57,7 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
     ML_ObjList *buf = NULL;
     PyObject *rv = NULL;
 
-    // TODO: or kwargs
+    // TODO: or kwargs, remember METH_KEYWORDS bit flag
 
     if (!PyArg_ParseTuple(args, "OOO", &globals, &serializer, &undefined))
         return NULL;

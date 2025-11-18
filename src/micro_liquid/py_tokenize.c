@@ -5,6 +5,7 @@
 
 PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
 {
+    // TODO: declare and use goto fail more
     ML_Lexer *lexer = ML_Lexer_new(str);
     if (!lexer)
         return NULL;
@@ -13,7 +14,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     ML_Token **tokens = ML_Lexer_scan(lexer, &token_count);
     if (!tokens)
     {
-        ML_Lexer_destroy(lexer);
+        ML_Lexer_dealloc(lexer);
         return NULL;
     }
 
@@ -40,7 +41,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     }
 
     PyMem_Free(tokens);
-    ML_Lexer_destroy(lexer);
+    ML_Lexer_dealloc(lexer);
     return list;
 
 fail:
@@ -53,7 +54,7 @@ fail:
         }
         PyMem_Free(tokens);
     }
-    ML_Lexer_destroy(lexer);
+    ML_Lexer_dealloc(lexer);
     Py_XDECREF(list);
     return NULL;
 }

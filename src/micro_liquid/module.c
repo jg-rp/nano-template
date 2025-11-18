@@ -1,16 +1,11 @@
+#include "micro_liquid/py_parse.h"
 #include "micro_liquid/py_template.h"
 #include "micro_liquid/py_token_view.h"
 #include "micro_liquid/py_tokenize.h"
 #include <Python.h>
 
-typedef struct
-{
-    PyObject *ParseError;
-} ModuleState;
-
-// TODO: parse(src, data, serializer, undefined)
-
 static PyMethodDef micro_liquid_methods[] = {
+    {"parse", parse, METH_O, PyDoc_STR("parse(str) -> Template")},
     {"tokenize", tokenize, METH_O,
      PyDoc_STR("tokenize(str) -> list[TokenView]")},
     {NULL, NULL, 0, NULL}};

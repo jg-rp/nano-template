@@ -28,7 +28,7 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
     if (!nodes)
         goto fail;
 
-    template = MLPY_Template_new(src, nodes->items, nodes->capacity);
+    template = MLPY_Template_new(src, nodes->items, nodes->size);
     if (!template)
         goto fail;
 

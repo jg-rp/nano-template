@@ -37,11 +37,7 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
     return (PyObject *)op;
 }
 
-static PyObject *MLPY_Template_repr(PyObject *Py_UNUSED(self))
-{
-    PyObject *repr = PyUnicode_FromString("<Template>"); // TODO: better
-    return repr;
-}
+// TODO: __str__
 
 /// @brief Render a compiled template into a string.
 /// @return Python `str` containing the rendered template on success, or `NULL`
@@ -73,7 +69,8 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
 
     for (Py_ssize_t i = 0; i < op->node_count; i++)
     {
-        ML_Node_render(op->nodes[i], ctx, buf);
+        if (ML_Node_render(op->nodes[i], ctx, buf) < 0)
+            goto fail;
     }
 
     rv = ML_ObjList_join(buf);
@@ -93,7 +90,7 @@ fail:
     return NULL;
 }
 
-static PyMethodDef Template_methods[] = {{"insert",
+static PyMethodDef Template_methods[] = {{"render",
                                           (PyCFunction)MLPY_Template_render,
                                           METH_VARARGS, "Render the template"},
                                          {NULL, NULL, 0, NULL}};
@@ -101,7 +98,6 @@ static PyMethodDef Template_methods[] = {{"insert",
 static PyType_Slot Template_slots[] = {
     {Py_tp_doc, "Compiled micro template"},
     {Py_tp_dealloc, (void *)MLPY_Template_dealloc},
-    {Py_tp_repr, (void *)MLPY_Template_repr},
     {Py_tp_methods, Template_methods},
     {0, NULL}};
 

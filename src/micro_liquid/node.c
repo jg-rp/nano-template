@@ -1,15 +1,18 @@
 #include "micro_liquid/node.h"
 
 /// @brief Render `node` to `buf` in the given render context `ctx`.
-typedef int (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+typedef Py_ssize_t (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 
-static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                    ML_ObjList *buf);
+static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx,
+                                ML_ObjList *buf);
+static Py_ssize_t render_if_tag(ML_Node *node, ML_Context *ctx,
+                                ML_ObjList *buf);
+static Py_ssize_t render_for_tag(ML_Node *node, ML_Context *ctx,
+                                 ML_ObjList *buf);
+static Py_ssize_t render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static Py_ssize_t render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static Py_ssize_t render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                           ML_ObjList *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -62,7 +65,7 @@ void ML_Node_dealloc(ML_Node *self)
     PyMem_Free(self);
 }
 
-int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
+Py_ssize_t ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!self)
         return -1;
@@ -74,33 +77,38 @@ int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
     return fn(self, ctx, buf);
 }
 
-static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     PY_TODO_I();
 }
 
-static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static Py_ssize_t render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     PY_TODO_I();
 }
 
-static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static Py_ssize_t render_for_tag(ML_Node *node, ML_Context *ctx,
+                                 ML_ObjList *buf)
 {
     PY_TODO_I();
 }
 
-static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static Py_ssize_t render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    if (!node->str)
+        return 0; // XXX: silently ignoreing
+
+    // XXX: assumes str is a string
+    return ML_ObjList_append(buf, node->str);
+}
+
+static Py_ssize_t render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     PY_TODO_I();
 }
 
-static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
-{
-    PY_TODO_I();
-}
-
-static int render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                    ML_ObjList *buf)
+static Py_ssize_t render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                           ML_ObjList *buf)
 {
     PY_TODO_I();
 }

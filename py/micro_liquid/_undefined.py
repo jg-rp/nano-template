@@ -10,8 +10,8 @@ if TYPE_CHECKING:
 class Undefined:
     """The object used when a template variable can not be resolved."""
 
-    def __init__(self, name: str, token: TokenView):
-        self.name = name
+    def __init__(self, path: list[int | str], token: TokenView):
+        self.path = path
         self.token = token
 
     def __str__(self) -> str:

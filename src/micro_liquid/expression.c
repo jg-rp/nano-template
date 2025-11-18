@@ -1,4 +1,8 @@
 #include "micro_liquid/expression.h"
+#include "micro_liquid/py_token_view.h"
+
+static char undefined_value;
+#define UNDEFINED ((void *)&undefined_value)
 
 typedef PyObject *(*EvalFn)(ML_Expr *expr, ML_Context *ctx);
 
@@ -14,6 +18,9 @@ static EvalFn eval_table[] = {
     [EXPR_AND] = eval_and_expr,   [EXPR_OR] = eval_or_expr,
     [EXPR_STR] = eval_str_expr,   [EXPR_VAR] = eval_var_expr,
 };
+
+static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
+                           ML_Context *ctx);
 
 ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
                            ML_Expr **children, Py_ssize_t child_count,
@@ -216,6 +223,83 @@ static PyObject *eval_str_expr(ML_Expr *expr, ML_Context *ctx)
 
 static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
 {
-    // TODO:
-    PY_TODO();
+    Py_ssize_t count = expr->segment_count;
+    PyObject **segments = expr->path;
+
+    if (count == 0)
+    {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    PyObject *op = ML_Context_get(ctx, segments[0], UNDEFINED);
+
+    if (!op)
+        return NULL;
+
+    if (count == 1)
+        return op;
+
+    if (op == UNDEFINED)
+        return undefined(segments, 0, expr->token, ctx);
+
+    for (Py_ssize_t i = 1; i < count; i++)
+    {
+        Py_DECREF(op);
+        op = PyObject_GetItem(op, segments[i]);
+
+        if (!op)
+        {
+            PyErr_Clear();
+            return undefined(segments, i, expr->token, ctx);
+        }
+    }
+
+    return op;
+}
+
+static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
+                           ML_Context *ctx)
+{
+    PyObject *list = NULL;
+    PyObject *args = NULL;
+
+    PyObject *token_view =
+        MLPY_TokenView_new(ctx->str, token->start, token->end, token->kind);
+
+    if (!token_view)
+        return NULL;
+
+    list = PyList_New(end_pos);
+    if (!list)
+        goto fail;
+
+    for (Py_ssize_t i = 0; i <= end_pos; i++)
+    {
+        PyObject *item = path[i];
+        Py_INCREF(item);
+
+        if (PyList_SetItem(list, i, item) < 0)
+        {
+            // Undo the INCREF if insertion failed.
+            Py_DECREF(item);
+            goto fail;
+        }
+    }
+
+    args = Py_BuildValue("(O, O)", list, token_view);
+    PyObject *undef = PyObject_CallObject(ctx->undefined, args);
+    if (!undef)
+        goto fail;
+
+    Py_XDECREF(token_view);
+    Py_XDECREF(list);
+    Py_XDECREF(args);
+    return undef;
+
+fail:
+    Py_XDECREF(token_view);
+    Py_XDECREF(list);
+    Py_XDECREF(args);
+    return NULL;
 }

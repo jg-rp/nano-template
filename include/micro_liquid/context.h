@@ -24,10 +24,12 @@ ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
 
 void ML_Context_dealloc(ML_Context *self);
 
+// TODO: change to tale an out pointer and return code
+
 /// @brief Lookup `key` in the current scope.
 /// @return A new reference, or NULL if `key` is not in scope or `key` is not a
 /// Python str.
-PyObject *ML_Context_get(ML_Context *self, PyObject *key, ML_Token *token);
+PyObject *ML_Context_get(ML_Context *self, PyObject *key, void *undefined);
 
 /// @brief Extend scope with mapping `namespace`.
 /// A reference to `namespace` is stolen and DECREFed in `ML_Context_dealloc`.

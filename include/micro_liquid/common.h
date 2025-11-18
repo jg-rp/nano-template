@@ -22,4 +22,25 @@
         return -1;                                                             \
     } while (0)
 
+#define PY_DEBUG_PRINT(obj)                                                    \
+    do                                                                         \
+    {                                                                          \
+        PyObject *_repr = PyObject_Repr(obj);                                  \
+        if (_repr)                                                             \
+        {                                                                      \
+            PyObject *_bytes =                                                 \
+                PyUnicode_AsEncodedString(_repr, "utf-8", "strict");           \
+            if (_bytes)                                                        \
+            {                                                                  \
+                char *_str = PyBytes_AsString(_bytes);                         \
+                if (_str)                                                      \
+                {                                                              \
+                    printf("%s = %s\n", #obj, _str);                           \
+                }                                                              \
+                Py_DECREF(_bytes);                                             \
+            }                                                                  \
+            Py_DECREF(_repr);                                                  \
+        }                                                                      \
+    } while (0)
+
 #endif

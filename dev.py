@@ -2,7 +2,7 @@ from micro_liquid import parse
 from micro_liquid import tokenize
 from micro_liquid import Undefined
 
-text = "Hello {{ 'you' }}!"
+text = "Hello {{ '' or 'you' }}!"
 tokens = tokenize(text)
 
 for token in tokens:

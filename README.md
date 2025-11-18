@@ -7,3 +7,7 @@
 | Python wrapper function | `mlpy_buffer_new()`                    |
 | Macros / constants      | `ML_MAX_SIZE`                          |
 ```
+
+```
+PySys_WriteStdout("ch: %c\n", ch);
+```

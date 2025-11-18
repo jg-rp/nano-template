@@ -342,6 +342,7 @@ static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
 static ML_Node *ML_Parser_parse_output(ML_Parser *self)
 {
     ML_Parser_skip_wc(self);
+
     ML_Expr *expr = ML_Parser_parse_primary(self, PREC_LOWEST);
     if (!expr)
         return NULL;
@@ -474,7 +475,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
 
 fail:
     if (expr)
-        ML_Expression_destroy(expr);
+        ML_Expression_dealloc(expr);
     if (nodes)
         ML_NodeList_dealloc(nodes);
     if (block)
@@ -564,7 +565,7 @@ fail:
     if (ident)
         Py_XDECREF(ident);
     if (expr)
-        ML_Expression_destroy(expr);
+        ML_Expression_dealloc(expr);
     if (block)
         ML_NodeList_dealloc(block);
     if (nodes)
@@ -638,7 +639,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
 
 fail:
     if (left)
-        ML_Expression_destroy(left);
+        ML_Expression_dealloc(left);
     return NULL;
 }
 
@@ -653,7 +654,7 @@ static ML_Expr *ML_Parser_parse_group(ML_Parser *self)
 
     if (!ML_Parser_eat(self, TOK_R_PAREN))
     {
-        ML_Expression_destroy(expr);
+        ML_Expression_dealloc(expr);
         return NULL;
     }
 
@@ -690,10 +691,20 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
     ML_Expr *expr = NULL;
 
     if (!right)
-        ML_Expression_destroy(left);
-    return NULL;
+    {
+        // ML_Expression_dealloc(left);
+        return NULL;
+    }
 
-    ML_Expr *children[] = {left, right};
+    ML_Expr **children = PyMem_Malloc(sizeof(ML_Expr) * 2);
+    if (!children)
+    {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    children[0] = left;
+    children[1] = right;
 
     switch (kind)
     {
@@ -709,8 +720,8 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
 
     if (!expr)
     {
-        ML_Expression_destroy(left);
-        ML_Expression_destroy(right);
+        ML_Expression_dealloc(left);
+        ML_Expression_dealloc(right);
         return NULL;
     }
 

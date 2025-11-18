@@ -58,7 +58,7 @@ void ML_Node_dealloc(ML_Node *self)
 
     if (self->expr)
     {
-        ML_Expression_destroy(self->expr);
+        ML_Expression_dealloc(self->expr);
     }
 
     Py_XDECREF(self->str);
@@ -79,7 +79,28 @@ Py_ssize_t ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 
 static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
-    PY_TODO_I();
+    PyObject *str = NULL;
+    PyObject *op = ML_Expression_evaluate(node->expr, ctx);
+
+    if (!op)
+        return -1;
+
+    str = PyObject_CallFunctionObjArgs(ctx->serializer, op, NULL);
+
+    if (!str)
+        goto fail;
+
+    Py_ssize_t rv = ML_ObjList_append(buf, str);
+    if (rv < 0)
+        goto fail;
+
+    Py_DECREF(op);
+    return rv;
+
+fail:
+    Py_XDECREF(op);
+    Py_XDECREF(str);
+    return -1;
 }
 
 static Py_ssize_t render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)

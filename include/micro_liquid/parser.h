@@ -36,7 +36,7 @@ ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end);
 ML_NodeList *ML_NodeList_new(void);
 void ML_NodeList_dealloc(ML_NodeList *self);
 void ML_NodeList_disown(ML_NodeList *self);
-static Py_ssize_t ML_NodeList_grow(ML_NodeList *self);
-static Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node);
+Py_ssize_t ML_NodeList_grow(ML_NodeList *self);
+Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node);
 
 #endif

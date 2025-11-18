@@ -106,11 +106,6 @@ static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
 
 // TODO: ML_Token_destroy for symmetry
 
-static PyObject *ML_Token_text(ML_Token *self, PyObject *str)
-{
-    return PyUnicode_Substring(str, self->start, self->end);
-}
-
 // Assumes number of tokens is less than 32 or 64.
 typedef Py_ssize_t ML_TokenMask;
 

@@ -84,12 +84,13 @@ PyObject *ML_ObjList_join(ML_ObjList *self)
     {
         PyObject *item = self->items[i];
 
-        if (!PyUnicode_Check(item))
-        {
-            PyErr_Format(PyExc_TypeError, "expected str, got %.200s",
-                         Py_TYPE(item)->tp_name);
-            goto fail;
-        }
+        // TODO:
+        // if (!PyUnicode_Check(item))
+        // {
+        //     PyErr_Format(PyExc_TypeError, "expected str, got %.200s",
+        //                  Py_TYPE(item)->tp_name);
+        //     goto fail;
+        // }
 
         // PyList_SetItem steals a reference *if* it succeeds,
         // so we need to INCREF first.
@@ -103,7 +104,7 @@ PyObject *ML_ObjList_join(ML_ObjList *self)
         }
     }
 
-    sep = PyUnicode_New(0, 0); // empty separator
+    sep = PyUnicode_FromString("");
     if (!sep)
         goto fail;
 

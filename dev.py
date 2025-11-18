@@ -1,3 +1,4 @@
+from micro_liquid import parse
 from micro_liquid import tokenize
 
 text = "Hello {{ 'you' }}!"
@@ -5,6 +6,8 @@ tokens = tokenize(text)
 
 for token in tokens:
     print(repr(token))
+
+template = parse(text)
 
 # TODO: rename to _tokenize
 # TODO: rename project to micro-t or micro_t

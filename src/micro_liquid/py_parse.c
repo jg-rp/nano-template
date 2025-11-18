@@ -3,7 +3,7 @@
 #include "micro_liquid/parser.h"
 #include "micro_liquid/py_template.h"
 
-PyObject *parse(PyObject *self, PyObject *src)
+PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
 {
     ML_Token **tokens = NULL;
     Py_ssize_t token_count = 0;

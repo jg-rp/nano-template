@@ -1,3 +1,8 @@
+from collections.abc import Mapping
+from typing import Callable
+from typing import Type
+from ._undefined import Undefined
+
 class TokenView:
     """Lightweight token view into source text (read-only)."""
 
@@ -12,3 +17,13 @@ class TokenView:
     def kind(self) -> int: ...
 
 def tokenize(source: str) -> list[TokenView]: ...
+
+class Template:
+    def render(
+        self,
+        data: Mapping[str, object],
+        serializer: Callable[[object], str],
+        undefined: Type[Undefined],
+    ) -> str: ...
+
+def parse(source: str) -> Template: ...

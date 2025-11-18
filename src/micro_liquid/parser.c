@@ -75,6 +75,8 @@ static PyObject *ML_Parser_parse_identifier(ML_Parser *self);
 static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self);
 static PyObject *ML_Parser_parse_shorthand_path_selector(ML_Parser *self);
 
+static inline PyObject *ML_Token_text(ML_Token *self, PyObject *str);
+
 // Bit masks for testing ML_TokenKind membership.
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
                                         ((Py_ssize_t)1 << TOK_ELIF_TAG) |
@@ -585,6 +587,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
         // XXX: check ML_Token_text return value is not NULL
         left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
                                  ML_Token_text(token, self->str), NULL, 0);
+        self->pos++;
         break;
     case TOK_SINGLE_ESC_STRING:
     case TOK_DOUBLE_ESC_STRING:
@@ -592,6 +595,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
         // XXX: check ML_Token_text return value is not NULL
         left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
                                  ML_Token_text(token, self->str), NULL, 0);
+        self->pos++;
         break;
     case TOK_L_PAREN:
         left = ML_Parser_parse_group(self);
@@ -801,7 +805,7 @@ static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self)
     if (!segment)
         return NULL;
 
-    if (ML_Parser_eat(self, TOK_R_BRACKET) < 0)
+    if (!ML_Parser_eat(self, TOK_R_BRACKET))
         return NULL;
 
     return segment;
@@ -946,4 +950,9 @@ Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node)
 
     self->items[self->size++] = node;
     return 0;
+}
+
+static inline PyObject *ML_Token_text(ML_Token *self, PyObject *str)
+{
+    return PyUnicode_Substring(str, self->start, self->end);
 }

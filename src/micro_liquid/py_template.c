@@ -6,7 +6,7 @@ static PyTypeObject *Template_TypeObject = NULL;
 
 void MLPY_Template_dealloc(PyObject *self)
 {
-    MLPY_Template *op = PyObject_New(MLPY_Template, Template_TypeObject);
+    MLPY_Template *op = (MLPY_Template *)self;
 
     for (Py_ssize_t i = 0; i < op->node_count; i++)
         ML_Node_dealloc(op->nodes[i]);
@@ -37,9 +37,8 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
     return (PyObject *)op;
 }
 
-static PyObject *MLPY_Template_repr(PyObject *self, PyObject *args)
+static PyObject *MLPY_Template_repr(PyObject *Py_UNUSED(self))
 {
-    MLPY_Template *op = (MLPY_Template *)self;
     PyObject *repr = PyUnicode_FromString("<Template>"); // TODO: better
     return repr;
 }

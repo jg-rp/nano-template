@@ -2,11 +2,7 @@
 # Cross-platform Python C-extension helpers
 # -----------------------------
 
-# Platform-specific Python helpers
-# script import sys
-# script if sys.platform == "darwin":
-# script     import lldb.macosx
-
+script import lldb.macosx
 
 # Aliases
 command regex bp 's/(.*)/breakpoint set --name \1/'

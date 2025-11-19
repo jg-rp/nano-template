@@ -34,9 +34,10 @@ typedef enum
     TOK_OR,
     TOK_NOT,
     TOK_IN,
+    TOK_EOF,
     TOK_ERROR,
-    TOK_UNKNOWN,
-    TOK_EOF
+    TOK_UNKNOWN
+
 } ML_TokenKind;
 
 static const char *ML_TokenKind_names[] = {

@@ -187,36 +187,39 @@ fail:
 
 static inline ML_Token *ML_Parser_next(ML_Parser *self)
 {
-    if (self->pos >= self->length)
+    if (self->pos >= self->token_count)
+    {
         // Last token is always EOF
-        return self->tokens[self->length - 1];
+        return self->tokens[self->token_count - 1];
+    }
 
     return self->tokens[self->pos++];
 }
 
 static inline ML_Token *ML_Parser_current(ML_Parser *self)
 {
-    if (self->pos >= self->length)
-        // Last token is always EOF
-        return self->tokens[self->length - 1];
+    if (self->pos >= self->token_count)
+        return self->tokens[self->token_count - 1];
 
     return self->tokens[self->pos];
 }
 
 static inline ML_Token *ML_Parser_peek(ML_Parser *self)
 {
-    if (self->pos + 1 >= self->length)
+    if (self->pos + 1 >= self->token_count)
+    {
         // Last token is always EOF
-        return self->tokens[self->length - 1];
+        return self->tokens[self->token_count - 1];
+    }
 
     return self->tokens[self->pos + 1];
 }
 
 static inline ML_Token *ML_Parser_peek_n(ML_Parser *self, Py_ssize_t n)
 {
-    if (self->pos + n >= self->length)
+    if (self->pos + n >= self->token_count)
         // Last token is always EOF
-        return self->tokens[self->length - 1];
+        return self->tokens[self->token_count - 1];
 
     return self->tokens[self->pos + n];
 }
@@ -278,15 +281,15 @@ static inline bool ML_Parser_end_block(ML_Parser *self, ML_TokenMask end)
     // Assumes we're at TOK_TAG_START.
     ML_Token *token = ML_Parser_peek(self);
 
-    if (ML_Token_mask_test(token->kind, end))
-        return true;
-
     if (ML_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        token = ML_Parser_peek_n(self, 2);
-        if (ML_Token_mask_test(token->kind, end))
+        ML_Token *peeked = ML_Parser_peek_n(self, 2);
+        if (ML_Token_mask_test(peeked->kind, end))
             return true;
     }
+
+    if (ML_Token_mask_test(token->kind, end))
+        return true;
 
     return false;
 }

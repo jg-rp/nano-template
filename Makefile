@@ -64,6 +64,6 @@ test:
 	$(PYTHON) -m pytest -v
 
 lldb: rebuild_debug
-	lldb-16 -- $(VENV_PY) $(TEST)
+	lldb -- $(VENV_PY) $(TEST)
 
 .PHONY: all build build_debug develop clean rebuild rebuild_debug format tidy valgrind test

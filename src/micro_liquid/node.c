@@ -1,6 +1,6 @@
 #include "micro_liquid/node.h"
 
-/// @brief Render `node` to `buf` in the given render context `ctx`.
+/// @brief Render `node` to `buf` with data from render context `ctx`.
 typedef Py_ssize_t (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 
 static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx,

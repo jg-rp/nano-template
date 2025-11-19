@@ -11,3 +11,9 @@
 ```
 PySys_WriteStdout("ch: %c\n", ch);
 ```
+
+# lldb
+
+```
+command source .lldbinit
+```

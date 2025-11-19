@@ -8,6 +8,11 @@ SRC_DIR := src
 C_SOURCES := $(shell find $(SRC_DIR) -name '*.c')
 COMPILE_DB := $(BUILD_DIR)/compile_commands.json
 
+# For use with lldb
+VENV_PY := $(VIRTUAL_ENV)/bin/python
+# Default test script
+TEST ?= dev.py
+
 # Default target: build the C extension in place (optimized)
 all: build
 
@@ -57,5 +62,8 @@ $(COMPILE_DB): setup.py $(C_SOURCES)
 # Run tests
 test:
 	$(PYTHON) -m pytest -v
+
+lldb: rebuild_debug
+	lldb-16 -- $(VENV_PY) $(TEST)
 
 .PHONY: all build build_debug develop clean rebuild rebuild_debug format tidy valgrind test

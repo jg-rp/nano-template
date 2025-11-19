@@ -25,16 +25,17 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
         return NULL;
     }
 
-    MLPY_Template *op = PyObject_New(MLPY_Template, Template_TypeObject);
-
-    if (!op)
+    PyObject *obj = PyType_GenericNew(Template_TypeObject, NULL, NULL);
+    if (!obj)
         return NULL;
+
+    MLPY_Template *op = (MLPY_Template *)obj;
 
     Py_INCREF(str);
     op->str = str;
     op->nodes = nodes;
     op->node_count = node_count;
-    return (PyObject *)op;
+    return obj;
 }
 
 // TODO: __str__

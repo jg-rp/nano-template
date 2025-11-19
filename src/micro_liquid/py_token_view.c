@@ -12,8 +12,12 @@ PyObject *MLPY_TokenView_new(PyObject *source, Py_ssize_t start, Py_ssize_t end,
         return NULL;
     }
 
-    MLPY_TokenViewObject *op =
-        PyObject_New(MLPY_TokenViewObject, TokenView_TypeObject);
+    PyObject *obj = PyType_GenericNew(TokenView_TypeObject, NULL, NULL);
+    if (!obj)
+        return NULL;
+
+    MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)obj;
+
     if (!op)
         return NULL;
 
@@ -23,7 +27,7 @@ PyObject *MLPY_TokenView_new(PyObject *source, Py_ssize_t start, Py_ssize_t end,
     op->end = end;
     op->kind = kind;
 
-    return (PyObject *)op;
+    return obj;
 }
 
 static PyObject *TokenView_text(PyObject *self, void *Py_UNUSED(closure))

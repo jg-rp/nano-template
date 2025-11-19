@@ -36,6 +36,7 @@ ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
     Py_INCREF(serializer);
     Py_INCREF(undefined);
 
+    ctx->str = str;
     ctx->scope = NULL;
     ctx->size = 0;
     ctx->capacity = 0;
@@ -61,7 +62,7 @@ void ML_Context_dealloc(ML_Context *self)
     PyMem_Free(self);
 }
 
-PyObject *ML_Context_get(ML_Context *self, PyObject *key, void *undefined)
+int ML_Context_get(ML_Context *self, PyObject *key, PyObject **out)
 {
     PyObject *obj = NULL;
 
@@ -70,13 +71,14 @@ PyObject *ML_Context_get(ML_Context *self, PyObject *key, void *undefined)
         obj = PyObject_GetItem(self->scope[i], key);
         if (obj)
         {
-            return obj;
+            *out = obj;
+            return 0;
         }
         else
             PyErr_Clear();
     }
 
-    return undefined; // TODO: fix me
+    return -1;
 }
 
 void ML_Context_pop(ML_Context *self)

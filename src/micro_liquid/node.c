@@ -117,9 +117,8 @@ static Py_ssize_t render_for_tag(ML_Node *node, ML_Context *ctx,
 static Py_ssize_t render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!node->str)
-        return 0; // XXX: silently ignoreing
+        return 0; // XXX: silently ignoreing internal error
 
-    // XXX: assumes str is a string
     return ML_ObjList_append(buf, node->str);
 }
 

@@ -1,9 +1,6 @@
 #include "micro_liquid/expression.h"
 #include "micro_liquid/py_token_view.h"
 
-static char undefined_value;
-#define UNDEFINED ((void *)&undefined_value)
-
 typedef PyObject *(*EvalFn)(ML_Expr *expr, ML_Context *ctx);
 
 static PyObject *eval_bool_expr(ML_Expr *expr, ML_Context *ctx);
@@ -225,6 +222,7 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
 {
     Py_ssize_t count = expr->segment_count;
     PyObject **segments = expr->path;
+    PyObject *op = NULL;
 
     if (count == 0)
     {
@@ -232,16 +230,11 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
         return Py_None;
     }
 
-    PyObject *op = ML_Context_get(ctx, segments[0], UNDEFINED);
-
-    if (!op)
-        return NULL;
+    if (ML_Context_get(ctx, segments[0], &op) < 0)
+        return undefined(segments, 0, expr->token, ctx);
 
     if (count == 1)
         return op;
-
-    if (op == UNDEFINED)
-        return undefined(segments, 0, expr->token, ctx);
 
     for (Py_ssize_t i = 1; i < count; i++)
     {
@@ -258,6 +251,8 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
     return op;
 }
 
+/// @brief Construct a new instance of Undefined.
+/// @return A new Undefined object, or NULL on failure.
 static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
                            ML_Context *ctx)
 {
@@ -270,7 +265,7 @@ static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
     if (!token_view)
         return NULL;
 
-    list = PyList_New(end_pos);
+    list = PyList_New(end_pos + 1);
     if (!list)
         goto fail;
 

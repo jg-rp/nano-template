@@ -1,18 +1,18 @@
 #include "micro_liquid/node.h"
 
 /// @brief Render `node` to `buf` with data from render context `ctx`.
-typedef Py_ssize_t (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+typedef int (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
 
-static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx,
-                                ML_ObjList *buf);
-static Py_ssize_t render_if_tag(ML_Node *node, ML_Context *ctx,
-                                ML_ObjList *buf);
-static Py_ssize_t render_for_tag(ML_Node *node, ML_Context *ctx,
-                                 ML_ObjList *buf);
-static Py_ssize_t render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static Py_ssize_t render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static Py_ssize_t render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                           ML_ObjList *buf);
+static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+
+/// @brief Render node->children if node->expr is truthy.
+/// @return 1 if expr is truthy, 0 if expr is falsy, -1 on error.
+static int render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                    ML_ObjList *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -65,7 +65,7 @@ void ML_Node_dealloc(ML_Node *self)
     PyMem_Free(self);
 }
 
-Py_ssize_t ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
+int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!self)
         return -1;
@@ -77,7 +77,7 @@ Py_ssize_t ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
     return fn(self, ctx, buf);
 }
 
-static Py_ssize_t render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     PyObject *str = NULL;
     PyObject *op = ML_Expression_evaluate(node->expr, ctx);
@@ -103,32 +103,74 @@ fail:
     return -1;
 }
 
-static Py_ssize_t render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+{
+    Py_ssize_t child_count = node->child_count;
+    ML_Node *child = NULL;
+    int rv = 0;
+
+    for (Py_ssize_t i = 0; i < child_count; i++)
+    {
+        child = node->children[i];
+
+        if (child->kind == NODE_ELSE_BLOCK)
+            return render_block(child, ctx, buf);
+
+        rv = render_conditional_block(child, ctx, buf);
+
+        if (rv == 0)
+            continue;
+
+        return rv;
+    }
+
+    return 0;
+}
+
+static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     PY_TODO_I();
 }
 
-static Py_ssize_t render_for_tag(ML_Node *node, ML_Context *ctx,
-                                 ML_ObjList *buf)
+static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
-    PY_TODO_I();
-}
+    (void)ctx;
 
-static Py_ssize_t render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
-{
     if (!node->str)
         return 0; // XXX: silently ignoreing internal error
 
     return ML_ObjList_append(buf, node->str);
 }
 
-static Py_ssize_t render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
-    PY_TODO_I();
+    for (Py_ssize_t i = 0; i < node->child_count; i++)
+    {
+        if (ML_Node_render(node->children[i], ctx, buf) < 0)
+            return -1;
+    }
+
+    return 0;
 }
 
-static Py_ssize_t render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                           ML_ObjList *buf)
+static int render_conditional_block(ML_Node *node, ML_Context *ctx,
+                                    ML_ObjList *buf)
 {
-    PY_TODO_I();
+    if (!node->expr)
+        return 0;
+
+    PyObject *op = ML_Expression_evaluate(node->expr, ctx);
+    if (!op)
+        return -1;
+
+    int truthy = PyObject_IsTrue(op);
+    Py_XDECREF(op);
+
+    if (!truthy)
+        return 0;
+
+    if (render_block(node, ctx, buf) < 0)
+        return -1;
+
+    return 1;
 }

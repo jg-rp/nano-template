@@ -217,6 +217,9 @@ static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self)
     case '\'':
         self->pos++;
         return ML_Lexer_lex_string(self, '\'');
+    case '.':
+        self->pos++;
+        return ML_Token_new(start, self->pos, TOK_DOT);
     case '[':
         self->pos++;
         return ML_Token_new(start, self->pos, TOK_L_BRACKET);

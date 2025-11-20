@@ -436,7 +436,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
 
         node =
-            ML_Node_new(NODE_ELIF_BLOCK, block->items, block->size, expr, NULL);
+            ML_Node_new(NODE_IF_BLOCK, block->items, block->size, expr, NULL);
 
         if (!node)
             goto fail;

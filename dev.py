@@ -8,7 +8,7 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-text = "Hello {{ you }}!"
+text = "Hello {% if thing %}{{ you.foo }}{% else %}boo{% endif %}!"
 tokens = tokenize(text)
 
 for token in tokens:
@@ -16,7 +16,11 @@ for token in tokens:
 
 template = parse(text)
 print(template)
-print(template.render({"you": list("World")}, serialize, Undefined))
+print(
+    template.render(
+        {"thing": True, "you": {"foo": list("World")}}, serialize, Undefined
+    )
+)
 
 # TODO: rename to _tokenize
 # TODO: rename project to micro-t or micro_t

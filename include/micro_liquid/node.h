@@ -41,6 +41,6 @@ void ML_Node_dealloc(ML_Node *self);
 
 /// @brief Render a node to `buf` with data from `ctx`.
 /// @return 0 on success, -1 on failure with a Python error set.
-Py_ssize_t ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
+int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
 
 #endif

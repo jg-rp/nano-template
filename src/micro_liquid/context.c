@@ -1,27 +1,5 @@
 #include "micro_liquid/context.h"
 
-int ML_Context_push(ML_Context *self, PyObject *namespace)
-{
-    if (self->size >= self->capacity)
-    {
-        Py_ssize_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
-        PyObject **new_items =
-            PyMem_Realloc(self->scope, sizeof(PyObject *) * new_cap);
-        if (!new_items)
-        {
-            PyErr_NoMemory();
-            return -1;
-        }
-
-        self->scope = new_items;
-        self->capacity = new_cap;
-    }
-
-    Py_INCREF(namespace);
-    self->scope[self->size++] = namespace;
-    return 0;
-}
-
 ML_Context *ML_Context_new(PyObject *str, PyObject *globals,
                            PyObject *serializer, PyObject *undefined)
 {
@@ -79,6 +57,28 @@ int ML_Context_get(ML_Context *self, PyObject *key, PyObject **out)
     }
 
     return -1;
+}
+
+int ML_Context_push(ML_Context *self, PyObject *namespace)
+{
+    if (self->size >= self->capacity)
+    {
+        Py_ssize_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+        PyObject **new_items =
+            PyMem_Realloc(self->scope, sizeof(PyObject *) * new_cap);
+        if (!new_items)
+        {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        self->scope = new_items;
+        self->capacity = new_cap;
+    }
+
+    Py_INCREF(namespace);
+    self->scope[self->size++] = namespace;
+    return 0;
 }
 
 void ML_Context_pop(ML_Context *self)

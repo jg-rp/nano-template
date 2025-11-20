@@ -8,7 +8,7 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-text = "Hello {% if thing %}{{ you.foo }}{% else %}boo{% endif %}!"
+text = "Hello {% boo x in you.foo %}- {{ x }}\n{% endfor %}!"
 tokens = tokenize(text)
 
 for token in tokens:
@@ -18,7 +18,7 @@ template = parse(text)
 print(template)
 print(
     template.render(
-        {"thing": True, "you": {"foo": list("World")}}, serialize, Undefined
+        {"thing": False, "you": {"foo": list("World")}}, serialize, Undefined
     )
 )
 

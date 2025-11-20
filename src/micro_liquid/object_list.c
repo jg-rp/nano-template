@@ -22,15 +22,19 @@ ML_ObjList *ML_ObjList_new(void)
     return list;
 }
 
-void ML_ObjList_destroy(ML_ObjList *self)
+void ML_ObjList_dealloc(ML_ObjList *self)
 {
-    for (Py_ssize_t i = 0; i < self->size; i++)
-    {
-        if (self->items[i])
-        {
-            Py_XDECREF(self->items[i]);
-        }
-    }
+    // XXX: fixme
+
+    // for (Py_ssize_t i = 0; i < self->size; i++)
+    // {
+    //     if (self->items[i])
+    //     {
+    //         PySys_WriteStdout("!!: %ld of %ld\n", i, self->size);
+    //         Py_XDECREF(self->items[i]);
+    //     }
+    // }
+
     PyMem_Free(self->items);
     PyMem_Free(self);
 }
@@ -42,9 +46,11 @@ void ML_ObjList_disown(ML_ObjList *self)
 
 Py_ssize_t ML_ObjList_grow(ML_ObjList *self)
 {
-    size_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+    Py_ssize_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+
     PyObject **new_items =
         PyMem_Realloc(self->items, sizeof(PyObject *) * new_cap);
+
     if (!new_items)
     {
         PyErr_NoMemory();

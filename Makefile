@@ -9,7 +9,7 @@ C_SOURCES := $(shell find $(SRC_DIR) -name '*.c')
 COMPILE_DB := $(BUILD_DIR)/compile_commands.json
 
 # For use with lldb
-VENV_PY := $(VIRTUAL_ENV)/bin/python
+VENV_PY := ./.venv/bin/python
 # Default test script
 TEST ?= dev.py
 
@@ -31,8 +31,8 @@ build_debug:
 # Run Valgrind on the debug build
 valgrind: build_debug
 	@echo "==> Running Valgrind on _micro_liquid extension..."
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
-		./.venv/bin/python -c "import micro_liquid._micro_liquid; print('Micro Liquid loaded')"
+	valgrind -s --leak-check=full --show-leak-kinds=all --track-origins=yes \
+		./.venv/bin/python dev.py
 
 # Clean build artifacts
 clean:
@@ -64,6 +64,6 @@ test:
 	$(PYTHON) -m pytest -v
 
 lldb: rebuild_debug
-	lldb -- $(VENV_PY) $(TEST)
+	lldb-16 -- $(VENV_PY) $(TEST)
 
 .PHONY: all build build_debug develop clean rebuild rebuild_debug format tidy valgrind test

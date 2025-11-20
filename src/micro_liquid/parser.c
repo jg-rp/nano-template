@@ -923,14 +923,17 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             break;
         default:
             self->pos--;
-            ML_Expr *expr = ML_Expression_new(EXPR_VAR, token, NULL, 0, NULL,
-                                              segments->items, segments->size);
+            ML_Expr *expr = ML_Expression_new(
+                EXPR_VAR, ML_Token_new(token->start, token->end, token->kind),
+                NULL, 0, NULL, segments->items, segments->size);
 
             if (!expr)
             {
                 goto fail;
             }
 
+            segments->items = NULL;
+            segments->size = 0;
             ML_ObjList_disown(segments);
             return expr;
         }
@@ -949,7 +952,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
 fail:
     if (segments)
     {
-        ML_ObjList_destroy(segments);
+        ML_ObjList_dealloc(segments);
     }
     Py_XDECREF(obj);
     return NULL;

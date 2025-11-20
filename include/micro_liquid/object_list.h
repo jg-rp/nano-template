@@ -14,9 +14,11 @@ typedef struct ML_ObjList
 
 // Helpers for building arrays of PyObject*.
 ML_ObjList *ML_ObjList_new(void);
-void ML_ObjList_destroy(ML_ObjList *self);
+void ML_ObjList_dealloc(ML_ObjList *self);
 void ML_ObjList_disown(ML_ObjList *self);
 Py_ssize_t ML_ObjList_grow(ML_ObjList *self);
+
+// TODO: change this to not steal a reference
 /// Steals a reference to `obj`.
 Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj);
 

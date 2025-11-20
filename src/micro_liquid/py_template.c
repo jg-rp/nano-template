@@ -14,7 +14,7 @@ void MLPY_Template_dealloc(PyObject *self)
     }
 
     Py_XDECREF(op->str);
-    PyMem_Free(op);
+    PyObject_Free(op);
 }
 
 PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
@@ -93,7 +93,7 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
     }
 
     ML_Context_dealloc(ctx);
-    ML_ObjList_destroy(buf);
+    ML_ObjList_dealloc(buf);
     return rv;
 
 fail:
@@ -103,7 +103,7 @@ fail:
     }
     if (buf)
     {
-        ML_ObjList_destroy(buf);
+        ML_ObjList_dealloc(buf);
     }
     Py_XDECREF(rv);
     return NULL;

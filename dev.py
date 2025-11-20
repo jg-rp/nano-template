@@ -8,7 +8,7 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-text = "Hello {% boo x in you.foo %}- {{ x }}\n{% endfor %}!"
+text = "Hello {% for x in you.foo %}{% for y in z %}- {{ y }}{{ x }}\n{% endfor %}{% endfor %}!"
 tokens = tokenize(text)
 
 for token in tokens:
@@ -18,12 +18,14 @@ template = parse(text)
 print(template)
 print(
     template.render(
-        {"thing": False, "you": {"foo": list("World")}}, serialize, Undefined
+        {"z": [1, 2], "thing": False, "you": {"foo": list("World")}},
+        serialize,
+        Undefined,
     )
 )
 
 # TODO: rename to _tokenize
-# TODO: rename project to micro-t or micro_t
+# TODO: rename project to micro-t or micro_t or nano-t
 # TODO: rewrite java-style comments
 # TODO: use dealloc instead of destroy
 # TODO: use int instead of Py_ssize_t for return codes

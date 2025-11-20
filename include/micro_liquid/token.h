@@ -76,7 +76,9 @@ static const char *ML_TokenKind_names[] = {
 static inline const char *ML_TokenKind_str(ML_TokenKind kind)
 {
     if (kind >= TOK_WC_HYPHEN && kind <= TOK_EOF)
+    {
         return ML_TokenKind_names[kind];
+    }
     return "TOK_UNKNOWN";
 }
 

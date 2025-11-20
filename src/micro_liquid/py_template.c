@@ -9,7 +9,9 @@ void MLPY_Template_dealloc(PyObject *self)
     MLPY_Template *op = (MLPY_Template *)self;
 
     for (Py_ssize_t i = 0; i < op->node_count; i++)
+    {
         ML_Node_dealloc(op->nodes[i]);
+    }
 
     Py_XDECREF(op->str);
     PyMem_Free(op);
@@ -27,7 +29,9 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
 
     PyObject *obj = PyType_GenericNew(Template_TypeObject, NULL, NULL);
     if (!obj)
+    {
         return NULL;
+    }
 
     MLPY_Template *op = (MLPY_Template *)obj;
 
@@ -56,27 +60,37 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
     // TODO: or kwargs, remember METH_KEYWORDS bit flag
 
     if (!PyArg_ParseTuple(args, "OOO", &globals, &serializer, &undefined))
+    {
         return NULL;
+    }
 
     // TODO: validate arguments
 
     ctx = ML_Context_new(op->str, globals, serializer, undefined);
     if (!ctx)
+    {
         goto fail;
+    }
 
     buf = ML_ObjList_new();
     if (!buf)
+    {
         goto fail;
+    }
 
     for (Py_ssize_t i = 0; i < op->node_count; i++)
     {
         if (ML_Node_render(op->nodes[i], ctx, buf) < 0)
+        {
             goto fail;
+        }
     }
 
     rv = ML_ObjList_join(buf);
     if (!rv)
+    {
         goto fail;
+    }
 
     ML_Context_dealloc(ctx);
     ML_ObjList_destroy(buf);
@@ -84,9 +98,13 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
 
 fail:
     if (ctx)
+    {
         ML_Context_dealloc(ctx);
+    }
     if (buf)
+    {
         ML_ObjList_destroy(buf);
+    }
     Py_XDECREF(rv);
     return NULL;
 }
@@ -113,7 +131,9 @@ int ml_register_template_type(PyObject *module)
 {
     PyObject *type_obj = PyType_FromSpec(&Template_spec);
     if (!type_obj)
+    {
         return -1;
+    }
 
     Template_TypeObject = (PyTypeObject *)type_obj;
 

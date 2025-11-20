@@ -32,7 +32,7 @@ build_debug:
 valgrind: build_debug
 	@echo "==> Running Valgrind on _micro_liquid extension..."
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
-		$(PYTHON) -c "import py.micro_liquid._micro_liquid; print('Micro Liquid loaded')"
+		./.venv/bin/python -c "import micro_liquid._micro_liquid; print('Micro Liquid loaded')"
 
 # Clean build artifacts
 clean:

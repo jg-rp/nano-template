@@ -14,12 +14,16 @@ PyObject *MLPY_TokenView_new(PyObject *source, Py_ssize_t start, Py_ssize_t end,
 
     PyObject *obj = PyType_GenericNew(TokenView_TypeObject, NULL, NULL);
     if (!obj)
+    {
         return NULL;
+    }
 
     MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)obj;
 
     if (!op)
+    {
         return NULL;
+    }
 
     Py_INCREF(source);
     op->source = source;
@@ -66,7 +70,9 @@ static PyObject *TokenView_repr(PyObject *self)
     MLPY_TokenViewObject *op = (MLPY_TokenViewObject *)self;
     PyObject *text = PyUnicode_Substring(op->source, op->start, op->end);
     if (!text)
+    {
         return NULL;
+    }
     PyObject *repr = PyUnicode_FromFormat("<TokenView kind=%s, text=%R>",
                                           ML_TokenKind_str(op->kind), text);
     Py_DECREF(text);
@@ -98,7 +104,9 @@ int ml_register_token_view_type(PyObject *module)
 {
     PyObject *type_obj = PyType_FromSpec(&TokenView_spec);
     if (!type_obj)
+    {
         return -1;
+    }
 
     /* Store type object for future factories */
     TokenView_TypeObject = (PyTypeObject *)type_obj;

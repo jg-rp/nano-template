@@ -16,8 +16,8 @@ static EvalFn eval_table[] = {
     [EXPR_STR] = eval_str_expr,   [EXPR_VAR] = eval_var_expr,
 };
 
-static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
-                           ML_Context *ctx);
+static PyObject *undefined(PyObject **path, Py_ssize_t end_pos,
+                           ML_Token *token, ML_Context *ctx);
 
 ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
                            ML_Expr **children, Py_ssize_t child_count,
@@ -45,20 +45,26 @@ ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
 void ML_Expression_dealloc(ML_Expr *self)
 {
     if (!self)
+    {
         return;
+    }
 
     if (self->children)
     {
         for (Py_ssize_t i = 0; i < self->child_count; i++)
         {
             if (self->children[i])
+            {
                 ML_Expression_dealloc(self->children[i]);
+            }
         }
         PyMem_Free(self->children);
     }
 
     if (self->token)
+    {
         PyMem_Free(self->token);
+    }
 
     Py_XDECREF(self->str);
 
@@ -77,12 +83,16 @@ void ML_Expression_dealloc(ML_Expr *self)
 PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx)
 {
     if (!self)
+    {
         return NULL;
+    }
 
     EvalFn fn = eval_table[self->kind];
 
     if (!fn)
+    {
         return NULL;
+    }
 
     return fn(self, ctx);
 }
@@ -97,7 +107,9 @@ static PyObject *eval_bool_expr(ML_Expr *expr, ML_Context *ctx)
 
     PyObject *op = ML_Expression_evaluate(expr->children[0], ctx);
     if (!op)
+    {
         return NULL;
+    }
 
     int truthy = PyObject_IsTrue(op);
     Py_XDECREF(op);
@@ -125,7 +137,9 @@ static PyObject *eval_not_expr(ML_Expr *expr, ML_Context *ctx)
 
     PyObject *op = ML_Expression_evaluate(expr->children[0], ctx);
     if (!op)
+    {
         return NULL;
+    }
 
     int falsy = PyObject_Not(op);
     Py_XDECREF(op);
@@ -155,18 +169,26 @@ static PyObject *eval_and_expr(ML_Expr *expr, ML_Context *ctx)
     PyObject *op_right = NULL;
 
     if (!op_left)
+    {
         goto fail;
+    }
 
     int falsy = PyObject_Not(op_left);
     if (falsy == -1)
+    {
         goto fail;
+    }
 
     if (falsy)
+    {
         return op_left;
+    }
 
     op_right = ML_Expression_evaluate(expr->children[1], ctx);
     if (!op_right)
+    {
         goto fail;
+    }
 
     Py_XDECREF(op_left);
     return op_right;
@@ -189,18 +211,26 @@ static PyObject *eval_or_expr(ML_Expr *expr, ML_Context *ctx)
     PyObject *op_right = NULL;
 
     if (!op_left)
+    {
         goto fail;
+    }
 
     int truthy = PyObject_IsTrue(op_left);
     if (truthy == -1)
+    {
         goto fail;
+    }
 
     if (truthy)
+    {
         return op_left;
+    }
 
     op_right = ML_Expression_evaluate(expr->children[1], ctx);
     if (!op_right)
+    {
         goto fail;
+    }
 
     Py_XDECREF(op_left);
     return op_right;
@@ -231,10 +261,14 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
     }
 
     if (ML_Context_get(ctx, segments[0], &op) < 0)
+    {
         return undefined(segments, 0, expr->token, ctx);
+    }
 
     if (count == 1)
+    {
         return op;
+    }
 
     for (Py_ssize_t i = 1; i < count; i++)
     {
@@ -253,8 +287,8 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
 
 /// @brief Construct a new instance of Undefined.
 /// @return A new Undefined object, or NULL on failure.
-static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
-                           ML_Context *ctx)
+static PyObject *undefined(PyObject **path, Py_ssize_t end_pos,
+                           ML_Token *token, ML_Context *ctx)
 {
     PyObject *list = NULL;
     PyObject *args = NULL;
@@ -263,11 +297,15 @@ static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
         MLPY_TokenView_new(ctx->str, token->start, token->end, token->kind);
 
     if (!token_view)
+    {
         return NULL;
+    }
 
     list = PyList_New(end_pos + 1);
     if (!list)
+    {
         goto fail;
+    }
 
     for (Py_ssize_t i = 0; i <= end_pos; i++)
     {
@@ -285,7 +323,9 @@ static PyObject *undefined(PyObject **path, Py_ssize_t end_pos, ML_Token *token,
     args = Py_BuildValue("(O, O)", list, token_view);
     PyObject *undef = PyObject_CallObject(ctx->undefined, args);
     if (!undef)
+    {
         goto fail;
+    }
 
     Py_XDECREF(token_view);
     Py_XDECREF(list);

@@ -48,7 +48,9 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
 void ML_Node_dealloc(ML_Node *self)
 {
     if (!self)
+    {
         return;
+    }
 
     // Recursively destroy nodes.
     if (self->children)
@@ -56,7 +58,9 @@ void ML_Node_dealloc(ML_Node *self)
         for (Py_ssize_t i = 0; i < self->child_count; i++)
         {
             if (self->children[i])
+            {
                 ML_Node_dealloc(self->children[i]);
+            }
         }
         PyMem_Free(self->children);
     }
@@ -73,12 +77,16 @@ void ML_Node_dealloc(ML_Node *self)
 int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
 {
     if (!self)
+    {
         return -1;
+    }
 
     RenderFn fn = render_table[self->kind];
 
     if (!fn)
+    {
         return -1;
+    }
     return fn(self, ctx, buf);
 }
 
@@ -88,16 +96,22 @@ static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
     PyObject *op = ML_Expression_evaluate(node->expr, ctx);
 
     if (!op)
+    {
         return -1;
+    }
 
     str = PyObject_CallFunctionObjArgs(ctx->serializer, op, NULL);
 
     if (!str)
+    {
         goto fail;
+    }
 
     Py_ssize_t rv = ML_ObjList_append(buf, str);
     if (rv < 0)
+    {
         goto fail;
+    }
 
     Py_DECREF(op);
     return rv;
@@ -119,12 +133,16 @@ static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
         child = node->children[i];
 
         if (child->kind == NODE_ELSE_BLOCK)
+        {
             return render_block(child, ctx, buf);
+        }
 
         rv = render_conditional_block(child, ctx, buf);
 
         if (rv == 0)
+        {
             continue;
+        }
 
         return rv;
     }
@@ -135,7 +153,9 @@ static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 {
     if (node->child_count < 1)
+    {
         return 0; // XXX: silently ignore internal error
+    }
 
     PyObject *key = node->str;
     ML_Node *block = node->children[0];
@@ -146,31 +166,41 @@ static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 
     op = ML_Expression_evaluate(node->expr, ctx);
     if (!op)
+    {
         return -1;
+    }
 
     int rc = iter(op, &it);
     Py_DECREF(op);
 
     if (rc == -1)
+    {
         return -1;
+    }
 
     if (rc == 1)
     {
         // not iterable
         if (node->child_count == 2)
+        {
             // else block
             render_block(node->children[1], ctx, buf);
+        }
 
         return 0;
     }
 
     namespace = PyDict_New();
     if (!namespace)
+    {
         goto fail;
+    }
 
     Py_INCREF(namespace);
     if (ML_Context_push(ctx, namespace) < 0)
+    {
         goto fail;
+    }
 
     bool rendered = false;
 
@@ -180,18 +210,24 @@ static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
         if (!item)
         {
             if (PyErr_Occurred())
+            {
                 goto fail;
+            }
             break;
         }
 
         if (PyDict_SetItem(namespace, key, item) < 0)
+        {
             goto fail;
+        }
 
         Py_DECREF(item);
         rendered = true;
 
         if (render_block(block, ctx, buf) < 0)
+        {
             goto fail;
+        }
     }
 
     Py_DECREF(it);
@@ -199,8 +235,12 @@ static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
     Py_DECREF(namespace);
 
     if (!rendered && node->child_count == 2)
+    {
         if (render_block(node->children[1], ctx, buf) < 0)
+        {
             goto fail;
+        }
+    }
 
     return 0;
 
@@ -216,7 +256,9 @@ static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
     (void)ctx;
 
     if (!node->str)
+    {
         return 0; // XXX: silently ignoreing internal error
+    }
 
     return ML_ObjList_append(buf, node->str);
 }
@@ -226,7 +268,9 @@ static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
     for (Py_ssize_t i = 0; i < node->child_count; i++)
     {
         if (ML_Node_render(node->children[i], ctx, buf) < 0)
+        {
             return -1;
+        }
     }
 
     return 0;
@@ -236,20 +280,28 @@ static int render_conditional_block(ML_Node *node, ML_Context *ctx,
                                     ML_ObjList *buf)
 {
     if (!node->expr)
+    {
         return 0;
+    }
 
     PyObject *op = ML_Expression_evaluate(node->expr, ctx);
     if (!op)
+    {
         return -1;
+    }
 
     int truthy = PyObject_IsTrue(op);
     Py_XDECREF(op);
 
     if (!truthy)
+    {
         return 0;
+    }
 
     if (render_block(node, ctx, buf) < 0)
+    {
         return -1;
+    }
 
     return 1;
 }
@@ -268,7 +320,9 @@ static int iter(PyObject *op, PyObject **out_iter)
         Py_DECREF(items);
 
         if (!it)
+        {
             return -1;
+        }
 
         *out_iter = it;
         return 0;

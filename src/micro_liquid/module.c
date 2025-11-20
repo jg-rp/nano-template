@@ -22,7 +22,9 @@ PyMODINIT_FUNC PyInit__micro_liquid(void)
 {
     PyObject *mod = PyModule_Create(&micro_liquid_module);
     if (!mod)
+    {
         return NULL;
+    }
 
     if (ml_register_token_view_type(mod) < 0)
     {

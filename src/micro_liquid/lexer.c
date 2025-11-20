@@ -68,10 +68,14 @@ ML_Token *ML_Lexer_next(ML_Lexer *self)
     PyObject *str = self->str;
     Py_ssize_t length = PyUnicode_GetLength(str);
     if (length < 0)
+    {
         return NULL;
+    }
 
     if (self->pos >= length)
+    {
         return ML_Token_new(length, length, TOK_EOF);
+    }
 
     // TODO: branchless jump table?
 
@@ -128,7 +132,9 @@ ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
 
         tokens[token_count++] = tok;
         if (tok->kind == TOK_EOF)
+        {
             break;
+        }
     }
 
     *out_token_count = token_count;
@@ -144,7 +150,9 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
         ML_StateStack_push(&self->state, STATE_EXPR);
 
         if (is_whitespace_control(ML_Lexer_peek(self)))
+        {
             ML_StateStack_push(&self->state, STATE_WC);
+        }
 
         return ML_Token_new(start, self->pos, TOK_OUT_START);
     }
@@ -154,7 +162,9 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
         ML_StateStack_push(&self->state, STATE_TAG);
 
         if (is_whitespace_control(ML_Lexer_peek(self)))
+        {
             ML_StateStack_push(&self->state, STATE_WC);
+        }
 
         return ML_Token_new(start, self->pos, TOK_TAG_START);
     }
@@ -310,7 +320,9 @@ static ML_Token *ML_Lexer_lex_other(ML_Lexer *self)
 
     Py_ssize_t length = PyUnicode_GetLength(self->str);
     if (length < 0)
+    {
         return NULL;
+    }
 
     self->pos = length;
     return ML_Token_new(start, self->pos, TOK_OTHER);
@@ -393,7 +405,9 @@ static inline bool ML_Lexer_accept_while(PyObject *str, Py_ssize_t *pos,
     {
         Py_UCS4 ch = PyUnicode_ReadChar(str, *pos);
         if (!pred(ch))
+        {
             break;
+        }
         (*pos)++;
     }
 
@@ -410,7 +424,9 @@ static inline bool ML_Lexer_accept_until(PyObject *str, Py_ssize_t *pos,
     {
         Py_UCS4 ch = PyUnicode_ReadChar(str, *pos);
         if (pred(ch))
+        {
             break;
+        }
         (*pos)++;
     }
 
@@ -426,7 +442,9 @@ static inline bool ML_Lexer_accept_until_ch(PyObject *str, Py_ssize_t *pos,
     while (*pos < length)
     {
         if (PyUnicode_ReadChar(str, *pos) != (unsigned char)ch)
+        {
             break;
+        }
         (*pos)++;
     }
 
@@ -438,10 +456,14 @@ static inline bool ML_Lexer_accept_ch(PyObject *str, Py_ssize_t *pos, char ch)
     Py_ssize_t length = PyUnicode_GetLength(str);
 
     if (*pos >= length)
+    {
         return false;
+    }
 
     if (PyUnicode_ReadChar(str, *pos) != (unsigned char)ch)
+    {
         return false;
+    }
 
     (*pos)++;
     return true;
@@ -460,13 +482,17 @@ static inline bool ML_Lexer_accept_str(PyObject *str, Py_ssize_t *pos,
 
         // ASCII-only comparison
         if ((unsigned char)ch != (unsigned char)sstr[i])
+        {
             return false;
+        }
 
         i++;
     }
 
     if (sstr[i] != '\0')
+    {
         return false; // string didn't fully match
+    }
 
     *pos = start + i; // advance the position on success
     return true;
@@ -481,23 +507,31 @@ static inline bool ML_Lexer_accept_keyword(PyObject *str, Py_ssize_t *pos,
 
     // not enough room for keyword
     if (start + word_length > length)
+    {
         return false;
+    }
 
     // check characters one by one
     for (Py_ssize_t i = 0; i < word_length; i++)
     {
         Py_UCS4 ch = PyUnicode_ReadChar(str, start + i);
         if (ch != (unsigned char)word[i])
+        {
             return false;
+        }
     }
 
     // check the boundary after the keyword
     Py_UCS4 next = 0;
     if (start + word_length < length)
+    {
         next = PyUnicode_ReadChar(str, start + word_length);
+    }
 
     if (!is_word_boundary(next))
+    {
         return false;
+    }
 
     *pos += word_length;
     return true;

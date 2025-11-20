@@ -52,8 +52,7 @@ int ML_Context_get(ML_Context *self, PyObject *key, PyObject **out)
             *out = obj;
             return 0;
         }
-        else
-            PyErr_Clear();
+        PyErr_Clear();
     }
 
     return -1;
@@ -84,5 +83,7 @@ int ML_Context_push(ML_Context *self, PyObject *namespace)
 void ML_Context_pop(ML_Context *self)
 {
     if (self->size > 0)
+    {
         Py_DECREF(self->scope[--self->size]);
+    }
 }

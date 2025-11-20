@@ -8,7 +8,9 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     // TODO: declare and use goto fail more
     ML_Lexer *lexer = ML_Lexer_new(str);
     if (!lexer)
+    {
         return NULL;
+    }
 
     Py_ssize_t token_count = 0;
     ML_Token **tokens = ML_Lexer_scan(lexer, &token_count);
@@ -20,7 +22,9 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
 
     PyObject *list = PyList_New(token_count);
     if (!list)
+    {
         goto fail;
+    }
 
     for (Py_ssize_t i = 0; i < token_count; i++)
     {
@@ -29,7 +33,9 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
             MLPY_TokenView_new(str, token->start, token->end, token->kind);
 
         if (!view)
+        {
             goto fail;
+        }
 
         if (PyList_SetItem(list, i, view) < 0)
         {
@@ -50,7 +56,9 @@ fail:
         for (Py_ssize_t j = 0; j < token_count; j++)
         {
             if (tokens[j])
+            {
                 PyMem_Free(tokens[j]);
+            }
         }
         PyMem_Free(tokens);
     }

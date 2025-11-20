@@ -27,7 +27,9 @@ void ML_ObjList_destroy(ML_ObjList *self)
     for (Py_ssize_t i = 0; i < self->size; i++)
     {
         if (self->items[i])
+        {
             Py_XDECREF(self->items[i]);
+        }
     }
     PyMem_Free(self->items);
     PyMem_Free(self);
@@ -59,7 +61,9 @@ Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj)
     if (self->size == self->capacity)
     {
         if (ML_ObjList_grow(self) != 0)
+        {
             return -1;
+        }
     }
 
     self->items[self->size++] = obj;
@@ -69,7 +73,9 @@ Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj)
 PyObject *ML_ObjList_join(ML_ObjList *self)
 {
     if (!self)
+    {
         return NULL;
+    }
 
     Py_ssize_t n = (Py_ssize_t)self->size;
     PyObject *list = NULL;
@@ -78,7 +84,9 @@ PyObject *ML_ObjList_join(ML_ObjList *self)
 
     list = PyList_New(n);
     if (!list)
+    {
         goto fail;
+    }
 
     for (Py_ssize_t i = 0; i < n; i++)
     {
@@ -106,11 +114,15 @@ PyObject *ML_ObjList_join(ML_ObjList *self)
 
     sep = PyUnicode_FromString("");
     if (!sep)
+    {
         goto fail;
+    }
 
     joined = PyUnicode_Join(sep, list);
     if (!joined)
+    {
         goto fail;
+    }
 
     Py_DECREF(sep);
     Py_DECREF(list);

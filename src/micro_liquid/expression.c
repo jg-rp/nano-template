@@ -147,11 +147,11 @@ static PyObject *eval_not_expr(ML_Expr *expr, ML_Context *ctx)
     switch (falsy)
     {
     case 0:
-        Py_INCREF(Py_False);
-        return Py_False;
-    case 1:
         Py_INCREF(Py_True);
         return Py_True;
+    case 1:
+        Py_INCREF(Py_False);
+        return Py_False;
     default:
         return NULL;
     }

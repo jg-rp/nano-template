@@ -1,28 +1,10 @@
-import json
-from micro_liquid import parse
-from micro_liquid import tokenize
-from micro_liquid import Undefined
+from micro_liquid import render
 
 
-def serialize(obj: object) -> str:
-    return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
+source = "{{ not x or y  }}"
+data = {"x": False, "y": True}
 
-
-text = "Hello!"
-tokens = tokenize(text)
-
-for token in tokens:
-    print(repr(token))
-
-template = parse(text)
-print(template)
-print(
-    template.render(
-        {"z": [1, 2], "thing": False, "you": {"foo": list("World")}},
-        serialize,
-        Undefined,
-    )
-)
+print(render(source, data))
 
 
 # TODO: rename to _tokenize

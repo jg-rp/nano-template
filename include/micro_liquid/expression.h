@@ -7,7 +7,7 @@
 
 typedef enum
 {
-    EXPR_BOOL,
+    EXPR_BOOL = 1,
     EXPR_NOT,
     EXPR_AND,
     EXPR_OR,

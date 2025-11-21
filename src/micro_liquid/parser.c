@@ -458,10 +458,14 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
         goto fail;
     }
 
+    expr = NULL;
+
     if (ML_NodeList_append(nodes, node) < 0)
     {
         goto fail;
     }
+
+    node = NULL;
 
     // Zero or more elif blocks.
     while (ML_Parser_tag(self, TOK_ELIF_TAG))
@@ -510,10 +514,14 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
         }
 
+        expr = NULL;
+
         if (ML_NodeList_append(nodes, node) < 0)
         {
             goto fail;
         }
+
+        node = NULL;
     }
 
     // Optional else block.
@@ -538,10 +546,15 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
         }
 
+        ML_NodeList_disown(block);
+        block = NULL;
+
         if (ML_NodeList_append(nodes, node) < 0)
         {
             goto fail;
         }
+
+        node = NULL;
     }
 
     node = ML_Node_new(NODE_IF_TAG, nodes->items, nodes->size, NULL, NULL);
@@ -552,6 +565,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
 
     if (!ML_Parser_eat_empty_tag(self, TOK_ENDIF_TAG))
     {
+        node = NULL;
         goto fail;
     }
 
@@ -833,7 +847,17 @@ static ML_Expr *ML_Parser_parse_not(ML_Parser *self)
         return NULL;
     }
 
-    return ML_Expression_new(EXPR_NOT, NULL, &expr, 1, NULL, NULL, 0);
+    ML_Expr **children = PyMem_Malloc(sizeof(ML_Expr) * 1);
+    if (!children)
+    {
+        ML_Expression_dealloc(expr);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    children[0] = expr;
+
+    return ML_Expression_new(EXPR_NOT, NULL, children, 1, NULL, NULL, 0);
 }
 
 static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)

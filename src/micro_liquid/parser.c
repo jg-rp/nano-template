@@ -908,6 +908,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
         {
             goto fail;
         }
+        Py_DECREF(str);
     }
 
     for (;;)
@@ -947,6 +948,8 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
         {
             goto fail;
         }
+
+        Py_DECREF(obj);
     }
 
 fail:

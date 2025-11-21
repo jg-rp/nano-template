@@ -17,14 +17,28 @@ if debug_build:
     sys.argv.remove("--debug")
 
 extra_compile_args = []
+extra_link_args = []
+
 if sys.platform == "win32":
     extra_compile_args = ["/O2", "/W3"]
 else:
     extra_compile_args = (
-        ["-O0", "-g", "-Wall", "-Wextra"]
+        [
+            "-O0",
+            "-g",
+            "-Wall",
+            "-Wextra",
+            # "-fsanitize=address",
+            # "-fno-omit-frame-pointer",
+        ]
         if debug_build
         else ["-O3", "-Wall", "-Wextra"]
     )
+
+    # if debug_build:
+    #     extra_link_args = [
+    #         "-fsanitize=address",
+    #     ]
 
 
 ext_modules = [
@@ -34,6 +48,7 @@ ext_modules = [
         include_dirs=["include"],
         define_macros=[("PY_SSIZE_T_CLEAN", None), ("Py_LIMITED_API", "0x03060000")],
         extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
         py_limited_api=True,
     )
 ]

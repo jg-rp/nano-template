@@ -24,16 +24,13 @@ ML_ObjList *ML_ObjList_new(void)
 
 void ML_ObjList_dealloc(ML_ObjList *self)
 {
-    // XXX: fixme
-
-    // for (Py_ssize_t i = 0; i < self->size; i++)
-    // {
-    //     if (self->items[i])
-    //     {
-    //         PySys_WriteStdout("!!: %ld of %ld\n", i, self->size);
-    //         Py_XDECREF(self->items[i]);
-    //     }
-    // }
+    for (Py_ssize_t i = 0; i < self->size; i++)
+    {
+        if (self->items[i])
+        {
+            Py_XDECREF(self->items[i]);
+        }
+    }
 
     PyMem_Free(self->items);
     PyMem_Free(self);
@@ -73,6 +70,7 @@ Py_ssize_t ML_ObjList_append(ML_ObjList *self, PyObject *obj)
     }
 
     self->items[self->size++] = obj;
+    Py_INCREF(obj);
     return 0;
 }
 

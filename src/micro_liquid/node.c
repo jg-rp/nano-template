@@ -113,6 +113,7 @@ static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
         goto fail;
     }
 
+    Py_DECREF(str);
     Py_DECREF(op);
     return rv;
 

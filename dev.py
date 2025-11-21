@@ -8,7 +8,7 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-text = "Hello {% for x in you.foo %}{% for y in z %}- {{ y }}{{ x }}\n{% endfor %}{% endfor %}!"
+text = "Hello!"
 tokens = tokenize(text)
 
 for token in tokens:
@@ -23,6 +23,7 @@ print(
         Undefined,
     )
 )
+
 
 # TODO: rename to _tokenize
 # TODO: rename project to micro-t or micro_t or nano-t

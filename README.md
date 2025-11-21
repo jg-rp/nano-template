@@ -12,8 +12,20 @@
 PySys_WriteStdout("ch: %c\n", ch);
 ```
 
-# lldb
+## lldb
 
 ```
 command source .lldbinit
+```
+
+## ASan
+
+```
+# Linux
+export LD_PRELOAD=$(gcc -print-file-name=libasan.so)
+export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
+
+# macOS
+export DYLD_INSERT_LIBRARIES=$(clang -print-file-name=libclang_rt.asan_osx_dynamic.dylib)
+export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
 ```

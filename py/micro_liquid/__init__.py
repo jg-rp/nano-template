@@ -1,6 +1,8 @@
 import json
 from collections.abc import Mapping
 from typing import Any
+from typing import Callable
+from typing import Type
 
 from ._micro_liquid import Template
 from ._micro_liquid import TokenView
@@ -8,10 +10,12 @@ from ._micro_liquid import parse
 from ._micro_liquid import tokenize
 from ._token_kind import TokenKind
 from ._undefined import Undefined
+from ._undefined import StrictUndefined
 from ._exceptions import TemplateError
 from ._exceptions import TemplateSyntaxError
 
 __all__ = (
+    "StrictUndefined",
     "Template",
     "TemplateError",
     "TemplateSyntaxError",
@@ -29,10 +33,16 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-def render(source: str, data: Mapping[str, Any]) -> str:
+def render(
+    source: str,
+    data: Mapping[str, Any],
+    *,
+    serializer: Callable[[object], str] = serialize,
+    undefined: Type[Undefined] = Undefined,
+) -> str:
     """Render template `source` with variables from `data`."""
     try:
-        return parse(source).render(data, serialize, Undefined)
+        return parse(source).render(data, serializer, undefined)
     except RuntimeError as err:
         raise TemplateSyntaxError(
             str(err),

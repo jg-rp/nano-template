@@ -99,153 +99,167 @@ PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx)
 
 static PyObject *eval_bool_expr(ML_Expr *expr, ML_Context *ctx)
 {
-    if (!expr->children)
+    PyObject *op = NULL;
+    PyObject *result = NULL;
+
+    if (expr->child_count != 1)
     {
-        Py_INCREF(Py_False);
-        return Py_False;
+        result = Py_NewRef(Py_False);
+        goto cleanup;
     }
 
-    PyObject *op = ML_Expression_evaluate(expr->children[0], ctx);
+    op = ML_Expression_evaluate(expr->children[0], ctx);
     if (!op)
     {
-        return NULL;
+        goto cleanup;
     }
 
     int truthy = PyObject_IsTrue(op);
-    Py_XDECREF(op);
 
-    switch (truthy)
+    if (truthy == 0)
     {
-    case 0:
-        Py_INCREF(Py_False);
-        return Py_False;
-    case 1:
-        Py_INCREF(Py_True);
-        return Py_True;
-    default:
-        return NULL;
+        result = Py_NewRef(Py_False);
     }
+    else if (truthy == 1)
+    {
+        result = Py_NewRef(Py_True);
+    }
+
+cleanup:
+    Py_XDECREF(op);
+    return result;
 }
 
 static PyObject *eval_not_expr(ML_Expr *expr, ML_Context *ctx)
 {
+    PyObject *op = NULL;
+    PyObject *result = NULL;
+
     if (!expr->children)
     {
-        Py_INCREF(Py_True);
-        return Py_True;
+        result = Py_NewRef(Py_True);
+        goto cleanup;
     }
 
-    PyObject *op = ML_Expression_evaluate(expr->children[0], ctx);
+    op = ML_Expression_evaluate(expr->children[0], ctx);
     if (!op)
     {
-        return NULL;
+        goto cleanup;
     }
 
     int falsy = PyObject_Not(op);
-    Py_XDECREF(op);
 
-    switch (falsy)
+    if (falsy == 0)
     {
-    case 0:
-        Py_INCREF(Py_True);
-        return Py_True;
-    case 1:
-        Py_INCREF(Py_False);
-        return Py_False;
-    default:
-        return NULL;
+        result = Py_NewRef(Py_True);
     }
+    else if (falsy == 1)
+    {
+        result = Py_NewRef(Py_False);
+    }
+
+cleanup:
+    Py_XDECREF(op);
+    return result;
 }
 
 static PyObject *eval_and_expr(ML_Expr *expr, ML_Context *ctx)
 {
+    PyObject *left = NULL;
+    PyObject *right = NULL;
+    PyObject *result = NULL;
+
     if (expr->child_count != 2)
     {
-        Py_INCREF(Py_False);
-        return Py_False;
+        result = Py_NewRef(Py_False);
+        goto cleanup;
     }
 
-    PyObject *op_left = ML_Expression_evaluate(expr->children[0], ctx);
-    PyObject *op_right = NULL;
-
-    if (!op_left)
+    left = ML_Expression_evaluate(expr->children[0], ctx);
+    if (!left)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    int falsy = PyObject_Not(op_left);
+    int falsy = PyObject_Not(left);
     if (falsy == -1)
     {
-        goto fail;
+        goto cleanup;
     }
 
     if (falsy)
     {
-        return op_left;
+        // Short-circuit. Return left.
+        result = Py_NewRef(left);
+        goto cleanup;
     }
 
-    op_right = ML_Expression_evaluate(expr->children[1], ctx);
-    if (!op_right)
+    right = ML_Expression_evaluate(expr->children[1], ctx);
+    if (!right)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    Py_XDECREF(op_left);
-    return op_right;
+    result = Py_NewRef(right);
+    // Fall through.
 
-fail:
-    Py_XDECREF(op_left);
-    Py_XDECREF(op_right);
-    return NULL;
+cleanup:
+    Py_XDECREF(left);
+    Py_XDECREF(right);
+    return result;
 }
 
 static PyObject *eval_or_expr(ML_Expr *expr, ML_Context *ctx)
 {
+    PyObject *left = NULL;
+    PyObject *right = NULL;
+    PyObject *result = NULL;
+
     if (expr->child_count != 2)
     {
-        Py_INCREF(Py_False);
-        return Py_False;
+        result = Py_NewRef(Py_False);
+        goto cleanup;
     }
 
-    PyObject *op_left = ML_Expression_evaluate(expr->children[0], ctx);
-    PyObject *op_right = NULL;
+    left = ML_Expression_evaluate(expr->children[0], ctx);
 
-    if (!op_left)
+    if (!left)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    int truthy = PyObject_IsTrue(op_left);
+    int truthy = PyObject_IsTrue(left);
     if (truthy == -1)
     {
-        goto fail;
+        goto cleanup;
     }
 
     if (truthy)
     {
-        return op_left;
+        // Short-circuit. Return left.
+        result = Py_NewRef(left);
+        goto cleanup;
     }
 
-    op_right = ML_Expression_evaluate(expr->children[1], ctx);
-    if (!op_right)
+    right = ML_Expression_evaluate(expr->children[1], ctx);
+    if (!right)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    Py_XDECREF(op_left);
-    return op_right;
+    result = Py_NewRef(right);
+    // Fall through.
 
-fail:
-    Py_XDECREF(op_left);
-    Py_XDECREF(op_right);
-    return NULL;
+cleanup:
+    Py_XDECREF(left);
+    Py_XDECREF(right);
+    return result;
 }
 
 static PyObject *eval_str_expr(ML_Expr *expr, ML_Context *ctx)
 {
     (void)ctx;
-    Py_INCREF(expr->str);
-    return expr->str;
+    return Py_NewRef(expr->str);
 }
 
 static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
@@ -253,21 +267,24 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
     Py_ssize_t count = expr->segment_count;
     PyObject **segments = expr->path;
     PyObject *op = NULL;
+    PyObject *result = NULL;
 
     if (count == 0)
     {
-        Py_INCREF(Py_None);
-        return Py_None;
+        result = Py_NewRef(Py_None);
+        goto cleanup;
     }
 
     if (ML_Context_get(ctx, segments[0], &op) < 0)
     {
-        return undefined(segments, 0, expr->token, ctx);
+        result = undefined(segments, 0, expr->token, ctx);
+        goto cleanup;
     }
 
     if (count == 1)
     {
-        return op;
+        result = Py_NewRef(op);
+        goto cleanup;
     }
 
     for (Py_ssize_t i = 1; i < count; i++)
@@ -278,11 +295,16 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
         if (!op)
         {
             PyErr_Clear();
-            return undefined(segments, i, expr->token, ctx);
+            result = undefined(segments, i, expr->token, ctx);
+            goto cleanup;
         }
     }
 
-    return op;
+    result = Py_NewRef(op);
+
+cleanup:
+    Py_XDECREF(op);
+    return result;
 }
 
 /// @brief Construct a new instance of Undefined.
@@ -290,51 +312,50 @@ static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
 static PyObject *undefined(PyObject **path, Py_ssize_t end_pos,
                            ML_Token *token, ML_Context *ctx)
 {
+    PyObject *token_view = NULL;
     PyObject *list = NULL;
     PyObject *args = NULL;
+    PyObject *item = NULL;
+    PyObject *result = NULL;
 
-    PyObject *token_view =
+    token_view =
         MLPY_TokenView_new(ctx->str, token->start, token->end, token->kind);
 
     if (!token_view)
     {
-        return NULL;
+        goto cleanup;
     }
 
     list = PyList_New(end_pos + 1);
     if (!list)
     {
-        goto fail;
+        goto cleanup;
     }
 
     for (Py_ssize_t i = 0; i <= end_pos; i++)
     {
-        PyObject *item = path[i];
-        Py_INCREF(item);
+        item = Py_NewRef(path[i]);
 
         if (PyList_SetItem(list, i, item) < 0)
         {
             // Undo the INCREF if insertion failed.
             Py_DECREF(item);
-            goto fail;
+            goto cleanup;
         }
     }
 
-    args = Py_BuildValue("(O, O)", list, token_view);
-    PyObject *undef = PyObject_CallObject(ctx->undefined, args);
-    if (!undef)
+    args = Py_BuildValue("(O, O, O)", ctx->str, list, token_view);
+    if (!args)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    Py_XDECREF(token_view);
-    Py_XDECREF(list);
-    Py_XDECREF(args);
-    return undef;
+    result = PyObject_CallObject(ctx->undefined, args);
+    // Fall through.
 
-fail:
+cleanup:
     Py_XDECREF(token_view);
     Py_XDECREF(list);
     Py_XDECREF(args);
-    return NULL;
+    return result;
 }

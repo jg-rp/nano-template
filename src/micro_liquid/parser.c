@@ -77,6 +77,7 @@ static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self);
 static PyObject *ML_Parser_parse_shorthand_path_selector(ML_Parser *self);
 
 static inline PyObject *ML_Token_text(ML_Token *self, PyObject *str);
+static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right);
 
 // Bit masks for testing ML_TokenKind membership.
 static const ML_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
@@ -363,16 +364,33 @@ static inline Precedence precedence(ML_TokenKind kind)
 
 static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
 {
-    // TODO: trim
+
     PyObject *str = ML_Token_text(token, self->str);
     if (!str)
     {
         return NULL;
     }
 
-    ML_Node *node = ML_Node_new(NODE_TEXT, NULL, 0, NULL, str);
+    ML_TokenKind wc_right = TOK_WC_NONE;
+    ML_Token *peeked = ML_Parser_peek(self);
+
+    if (ML_Token_mask_test(peeked->kind, WHITESPACE_CONTROL_MASK))
+    {
+        wc_right = peeked->kind;
+    }
+
+    PyObject *trimmed = trim(str, self->whitespace_carry, wc_right);
+    Py_DECREF(str);
+
+    if (!trimmed)
+    {
+        return NULL;
+    }
+
+    ML_Node *node = ML_Node_new(NODE_TEXT, NULL, 0, NULL, trimmed);
     if (!node)
     {
+        Py_DECREF(trimmed);
         return NULL;
     }
 
@@ -1185,4 +1203,70 @@ Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node)
 static inline PyObject *ML_Token_text(ML_Token *self, PyObject *str)
 {
     return PyUnicode_Substring(str, self->start, self->end);
+}
+
+// TODO: refactor
+static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right)
+{
+    PyObject *result = NULL;
+
+    if (left == right)
+    {
+        if (left == TOK_WC_HYPHEN)
+        {
+            result = PyObject_CallMethod(value, "strip", NULL);
+            return result;
+        }
+        if (left == TOK_WC_TILDE)
+        {
+            result = PyObject_CallMethod(value, "strip", "s", "\r\n");
+            return result;
+        }
+
+        Py_INCREF(value);
+        return value;
+    }
+
+    result = value;
+    Py_INCREF(result);
+
+    if (left == TOK_WC_HYPHEN)
+    {
+        PyObject *tmp = PyObject_CallMethod(result, "lstrip", NULL);
+        if (!tmp)
+            goto fail;
+        Py_DECREF(result);
+        result = tmp;
+    }
+    else if (left == TOK_WC_TILDE)
+    {
+        PyObject *tmp = PyObject_CallMethod(result, "lstrip", "s", "\r\n");
+        if (!tmp)
+            goto fail;
+        Py_DECREF(result);
+        result = tmp;
+    }
+
+    if (right == TOK_WC_HYPHEN)
+    {
+        PyObject *tmp = PyObject_CallMethod(result, "rstrip", NULL);
+        if (!tmp)
+            goto fail;
+        Py_DECREF(result);
+        result = tmp;
+    }
+    else if (right == TOK_WC_TILDE)
+    {
+        PyObject *tmp = PyObject_CallMethod(result, "rstrip", "s", "\r\n");
+        if (!tmp)
+            goto fail;
+        Py_DECREF(result);
+        result = tmp;
+    }
+
+    return result;
+
+fail:
+    Py_XDECREF(result);
+    return NULL;
 }

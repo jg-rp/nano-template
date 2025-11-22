@@ -12,6 +12,7 @@ from ._undefined import Undefined
 from ._undefined import StrictUndefined
 from ._exceptions import TemplateError
 from ._exceptions import TemplateSyntaxError
+from ._exceptions import UndefinedVariableError
 
 __all__ = (
     "StrictUndefined",
@@ -21,6 +22,7 @@ __all__ = (
     "TokenKind",
     "TokenView",
     "Undefined",
+    "UndefinedVariableError",
     "parse",
     "render",
     "serialize",

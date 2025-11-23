@@ -1,13 +1,22 @@
-from typing import Any
+import json
 
 from micro_liquid import StrictUndefined
 from micro_liquid import render
+from micro_liquid._native import render as native_render
 
 
-source = "Hello {{ no.such.thing  }}!"
-data: dict[str, Any] = {"x": False, "y": True, "no": {"foo": 42}}
+with open("tests/fixtures/001/index.template", encoding="utf8") as fd:
+    source = fd.read()
 
-print(render(source, data, undefined=StrictUndefined))
+with open("tests/fixtures/001/data.json", encoding="utf8") as fd:
+    data = json.load(fd)
+
+# source = "Hello {{ no.such.thing  }}!"
+# data: dict[str, Any] = {"x": False, "y": True, "no": {"foo": 42}}
+
+# print(render(source, data))
+
+assert render(source, data) == native_render(source, data)
 
 
 # TODO: rename to _tokenize

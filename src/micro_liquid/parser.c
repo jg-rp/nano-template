@@ -1,5 +1,4 @@
 #include "micro_liquid/parser.h"
-#include "micro_liquid/object_list.h"
 #include <stdarg.h>
 
 typedef enum
@@ -753,17 +752,28 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     {
     case TOK_SINGLE_QUOTE_STRING:
     case TOK_DOUBLE_QUOTE_STRING:
-        // XXX: check ML_Token_text return value is not NULL
-        left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
-                                 ML_Token_text(token, self->str), NULL, 0);
-        self->pos++;
-        break;
     case TOK_SINGLE_ESC_STRING:
     case TOK_DOUBLE_ESC_STRING:
         // TODO: unescape
-        // XXX: check ML_Token_text return value is not NULL
-        left = ML_Expression_new(EXPR_STR, NULL, NULL, 0,
-                                 ML_Token_text(token, self->str), NULL, 0);
+        left = ML_Expression_new(EXPR_STR, NULL);
+        if (!left)
+        {
+            goto fail;
+        }
+
+        PyObject *str = ML_Token_text(token, self->str);
+        if (!str)
+        {
+            goto fail;
+        }
+
+        if (ML_Expression_add_obj(left, str) < 0)
+        {
+            Py_DECREF(str);
+            goto fail;
+        }
+
+        Py_DECREF(str);
         self->pos++;
         break;
     case TOK_L_PAREN:
@@ -859,23 +869,26 @@ static ML_Expr *ML_Parser_parse_not(ML_Parser *self)
         return NULL;
     }
 
+    ML_Expr *not_expr = ML_Expression_new(EXPR_NOT, NULL);
+    if (!not_expr)
+    {
+        return NULL;
+    }
+
     ML_Expr *expr = ML_Parser_parse_primary(self, PREC_LOWEST);
     if (!expr)
     {
         return NULL;
     }
 
-    ML_Expr **children = PyMem_Malloc(sizeof(ML_Expr) * 1);
-    if (!children)
+    if (ML_Expression_add_child(not_expr, expr) < 0)
     {
         ML_Expression_dealloc(expr);
-        PyErr_NoMemory();
+        ML_Expression_dealloc(not_expr);
         return NULL;
     }
 
-    children[0] = expr;
-
-    return ML_Expression_new(EXPR_NOT, NULL, children, 1, NULL, NULL, 0);
+    return not_expr;
 }
 
 static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
@@ -884,7 +897,7 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
     ML_TokenKind kind = token->kind;
     Precedence prec = precedence(kind);
     ML_Expr *right = ML_Parser_parse_primary(self, prec);
-    ML_Expr *expr = NULL;
+    ML_Expr *infix_expr = NULL;
 
     if (!right)
     {
@@ -892,50 +905,59 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
         return NULL;
     }
 
-    ML_Expr **children = PyMem_Malloc(sizeof(ML_Expr) * 2);
-    if (!children)
-    {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    children[0] = left;
-    children[1] = right;
-
     switch (kind)
     {
     case TOK_AND:
-        expr = ML_Expression_new(EXPR_AND, NULL, children, 2, NULL, NULL, 0);
+        infix_expr = ML_Expression_new(EXPR_AND, NULL);
         break;
     case TOK_OR:
-        expr = ML_Expression_new(EXPR_OR, NULL, children, 2, NULL, NULL, 0);
+        infix_expr = ML_Expression_new(EXPR_OR, NULL);
         break;
     default:
+        ML_Expression_dealloc(right);
         parser_error(token, "unexpected operator '%s'",
                      ML_TokenKind_str(kind));
     };
 
-    if (!expr)
+    if (!infix_expr)
     {
-        ML_Expression_dealloc(left);
         ML_Expression_dealloc(right);
         return NULL;
     }
 
-    return expr;
+    if (ML_Expression_add_child(infix_expr, left) < 0)
+    {
+        ML_Expression_dealloc(right);
+        ML_Expression_dealloc(infix_expr);
+        return NULL;
+    }
+
+    if (ML_Expression_add_child(infix_expr, right) < 0)
+    {
+        // XXX: caller deallocates left on error but it is now owned by
+        // infix_expr.
+        ML_Expression_dealloc(right);
+        ML_Expression_dealloc(infix_expr);
+        return NULL;
+    }
+
+    return infix_expr;
 }
 
 static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
 {
-    ML_ObjList *segments = ML_ObjList_new();
-    if (!segments)
-    {
-        return NULL;
-    }
-
     ML_Token *token = ML_Parser_current(self);
     ML_TokenKind kind = token->kind;
     PyObject *obj = NULL;
+
+    // TODO: deallocate copy token on error.
+    ML_Expr *expr = ML_Expression_new(
+        EXPR_VAR, ML_Token_new(token->start, token->end, token->kind));
+
+    if (!expr)
+    {
+        return NULL;
+    }
 
     if (kind == TOK_WORD)
     {
@@ -946,7 +968,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_ObjList_append(segments, str) == -1)
+        if (ML_Expression_add_obj(expr, str) == -1)
         {
             goto fail;
         }
@@ -966,18 +988,6 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             break;
         default:
             self->pos--;
-            ML_Expr *expr = ML_Expression_new(
-                EXPR_VAR, ML_Token_new(token->start, token->end, token->kind),
-                NULL, 0, NULL, segments->items, segments->size);
-
-            if (!expr)
-            {
-                goto fail;
-            }
-
-            segments->items = NULL;
-            segments->size = 0;
-            ML_ObjList_disown(segments);
             return expr;
         }
 
@@ -986,7 +996,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_ObjList_append(segments, obj) == -1)
+        if (ML_Expression_add_obj(expr, obj) == -1)
         {
             goto fail;
         }
@@ -995,9 +1005,9 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
     }
 
 fail:
-    if (segments)
+    if (expr)
     {
-        ML_ObjList_dealloc(segments);
+        ML_Expression_dealloc(expr);
     }
     Py_XDECREF(obj);
     return NULL;

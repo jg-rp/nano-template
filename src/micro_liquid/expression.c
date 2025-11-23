@@ -19,13 +19,9 @@ static EvalFn eval_table[] = {
 static PyObject *undefined(PyObject **path, Py_ssize_t end_pos,
                            ML_Token *token, ML_Context *ctx);
 
-ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
-                           ML_Expr **children, Py_ssize_t child_count,
-                           PyObject *str, PyObject **path,
-                           Py_ssize_t segment_count)
+ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token)
 {
     ML_Expr *expr = PyMem_Malloc(sizeof(ML_Expr));
-
     if (!expr)
     {
         PyErr_NoMemory();
@@ -34,11 +30,14 @@ ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token,
 
     expr->kind = kind;
     expr->token = token;
-    expr->children = children;
-    expr->child_count = child_count;
-    expr->str = str;
-    expr->path = path;
-    expr->segment_count = segment_count;
+
+    expr->child_count = 0;
+    expr->child_capacity = 0;
+    expr->children = NULL;
+
+    expr->object_count = 0;
+    expr->object_capacity = 0;
+    expr->objects = NULL;
     return expr;
 }
 
@@ -66,18 +65,83 @@ void ML_Expression_dealloc(ML_Expr *self)
         PyMem_Free(self->token);
     }
 
-    Py_XDECREF(self->str);
-
-    if (self->path)
+    if (self->objects)
     {
-        for (Py_ssize_t i = 0; i < self->segment_count; i++)
+        for (Py_ssize_t i = 0; i < self->object_count; i++)
         {
-            Py_XDECREF(self->path[i]);
+            Py_XDECREF(self->objects[i]);
         }
-        PyMem_Free(self->path);
+        PyMem_Free(self->objects);
     }
 
     PyMem_Free(self);
+}
+
+int ML_Expression_add_child(ML_Expr *self, ML_Expr *child)
+{
+    if (self->child_count == self->child_capacity)
+    {
+        Py_ssize_t new_cap =
+            (self->child_capacity == 0) ? 2 : (self->child_capacity * 2);
+
+        ML_Expr **new_children = NULL;
+
+        if (!self->children)
+        {
+            new_children = PyMem_Malloc(sizeof(ML_Expr *) * new_cap);
+        }
+        else
+        {
+            new_children =
+                PyMem_Realloc(self->children, sizeof(ML_Expr *) * new_cap);
+        }
+
+        if (!new_children)
+        {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        self->children = new_children;
+        self->child_capacity = new_cap;
+    }
+
+    self->children[self->child_count++] = child;
+    return 0;
+}
+
+int ML_Expression_add_obj(ML_Expr *self, PyObject *obj)
+{
+    if (self->object_count == self->object_capacity)
+    {
+        Py_ssize_t new_cap =
+            (self->object_capacity == 0) ? 4 : (self->object_capacity * 2);
+
+        PyObject **new_objects = NULL;
+
+        if (!self->objects)
+        {
+            new_objects = PyMem_Malloc(sizeof(PyObject *) * new_cap);
+        }
+        else
+        {
+            new_objects =
+                PyMem_Realloc(self->objects, sizeof(PyObject *) * new_cap);
+        }
+
+        if (!new_objects)
+        {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        self->objects = new_objects;
+        self->object_capacity = new_cap;
+    }
+
+    Py_INCREF(obj);
+    self->objects[self->object_count++] = obj;
+    return 0;
 }
 
 PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx)
@@ -259,13 +323,13 @@ cleanup:
 static PyObject *eval_str_expr(ML_Expr *expr, ML_Context *ctx)
 {
     (void)ctx;
-    return Py_NewRef(expr->str);
+    return Py_NewRef(expr->objects[0]);
 }
 
 static PyObject *eval_var_expr(ML_Expr *expr, ML_Context *ctx)
 {
-    Py_ssize_t count = expr->segment_count;
-    PyObject **segments = expr->path;
+    Py_ssize_t count = expr->object_count;
+    PyObject **segments = expr->objects;
     PyObject *op = NULL;
     PyObject *result = NULL;
 

@@ -1,6 +1,6 @@
 #include "micro_liquid/py_template.h"
 #include "micro_liquid/context.h"
-#include "micro_liquid/object_list.h"
+#include "micro_liquid/string_buffer.h"
 
 static PyTypeObject *Template_TypeObject = NULL;
 
@@ -54,7 +54,7 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
     PyObject *serializer = NULL;
     PyObject *undefined = NULL;
     ML_Context *ctx = NULL;
-    ML_ObjList *buf = NULL;
+    PyObject *buf = NULL;
     PyObject *rv = NULL;
 
     // TODO: or kwargs, remember METH_KEYWORDS bit flag
@@ -72,7 +72,7 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
         goto fail;
     }
 
-    buf = ML_ObjList_new();
+    buf = StringBuffer_new();
     if (!buf)
     {
         goto fail;
@@ -86,14 +86,13 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
         }
     }
 
-    rv = ML_ObjList_join(buf);
+    rv = StringBuffer_finish(buf);
     if (!rv)
     {
         goto fail;
     }
 
     ML_Context_dealloc(ctx);
-    ML_ObjList_dealloc(buf);
     return rv;
 
 fail:
@@ -101,10 +100,7 @@ fail:
     {
         ML_Context_dealloc(ctx);
     }
-    if (buf)
-    {
-        ML_ObjList_dealloc(buf);
-    }
+    Py_XDECREF(buf);
     Py_XDECREF(rv);
     return NULL;
 }

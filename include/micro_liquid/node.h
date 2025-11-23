@@ -4,7 +4,6 @@
 #include "micro_liquid/common.h"
 #include "micro_liquid/context.h"
 #include "micro_liquid/expression.h"
-#include "micro_liquid/object_list.h"
 
 /// @brief AST node kinds.
 typedef enum
@@ -18,6 +17,8 @@ typedef enum
     NODE_ELSE_BLOCK,
     NODE_TEXT
 } ML_NodeKind;
+
+// TODO: Avoid node lists and append to node directly?
 
 /// @brief Internal AST node.
 typedef struct ML_Node
@@ -41,6 +42,6 @@ void ML_Node_dealloc(ML_Node *self);
 
 /// @brief Render a node to `buf` with data from `ctx`.
 /// @return 0 on success, -1 on failure with a Python error set.
-int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf);
+int ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf);
 
 #endif

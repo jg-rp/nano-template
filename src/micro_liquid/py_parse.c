@@ -24,11 +24,16 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
         goto fail;
     }
 
+    // TODO: have Parser_new create the lexer and tokens so we don't
+    // need to worry about who owns them.
+
     parser = ML_Parser_new(src, tokens, token_count);
     if (!parser)
     {
         goto fail;
     }
+
+    // TODO: allocate template here and pass to Parser_parse.
 
     nodes = ML_Parser_parse(parser, 0);
     if (!nodes)

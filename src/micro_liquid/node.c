@@ -1,12 +1,13 @@
 #include "micro_liquid/node.h"
+#include "micro_liquid/string_buffer.h"
 
 /// @brief Render `node` to `buf` with data from render context `ctx`.
-typedef int (*RenderFn)(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+typedef int (*RenderFn)(ML_Node *node, ML_Context *ctx, PyObject *buf);
 
-static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
-static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_output(ML_Node *node, ML_Context *ctx, PyObject *buf);
+static int render_if_tag(ML_Node *node, ML_Context *ctx, PyObject *buf);
+static int render_for_tag(ML_Node *node, ML_Context *ctx, PyObject *buf);
+static int render_text(ML_Node *node, ML_Context *ctx, PyObject *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -15,12 +16,12 @@ static RenderFn render_table[] = {
     [NODE_TEXT] = render_text,
 };
 
-static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf);
+static int render_block(ML_Node *node, ML_Context *ctx, PyObject *buf);
 
 /// @brief Render node->children if node->expr is truthy.
 /// @return 1 if expr is truthy, 0 if expr is falsy, -1 on error.
 static int render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                    ML_ObjList *buf);
+                                    PyObject *buf);
 
 /// @brief Get an iterator for object `op`.
 /// @return 0 on success, 1 if op is not iterable, -1 on error.
@@ -74,7 +75,7 @@ void ML_Node_dealloc(ML_Node *self)
     PyMem_Free(self);
 }
 
-int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
+int ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf)
 {
     if (!self)
     {
@@ -90,7 +91,7 @@ int ML_Node_render(ML_Node *self, ML_Context *ctx, ML_ObjList *buf)
     return fn(self, ctx, buf);
 }
 
-static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_output(ML_Node *node, ML_Context *ctx, PyObject *buf)
 {
     PyObject *str = NULL;
     PyObject *op = ML_Expression_evaluate(node->expr, ctx);
@@ -107,7 +108,7 @@ static int render_output(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
         goto fail;
     }
 
-    Py_ssize_t rv = ML_ObjList_append(buf, str);
+    Py_ssize_t rv = StringBuffer_append(buf, str);
     if (rv < 0)
     {
         goto fail;
@@ -123,7 +124,7 @@ fail:
     return -1;
 }
 
-static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_if_tag(ML_Node *node, ML_Context *ctx, PyObject *buf)
 {
     Py_ssize_t child_count = node->child_count;
     ML_Node *child = NULL;
@@ -151,7 +152,7 @@ static int render_if_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
     return 0;
 }
 
-static int render_for_tag(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_for_tag(ML_Node *node, ML_Context *ctx, PyObject *buf)
 {
     if (node->child_count < 1)
     {
@@ -252,7 +253,7 @@ fail:
     return -1;
 }
 
-static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_text(ML_Node *node, ML_Context *ctx, PyObject *buf)
 {
     (void)ctx;
 
@@ -261,10 +262,10 @@ static int render_text(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
         return 0; // XXX: silently ignoreing internal error
     }
 
-    return ML_ObjList_append(buf, node->str);
+    return StringBuffer_append(buf, node->str);
 }
 
-static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
+static int render_block(ML_Node *node, ML_Context *ctx, PyObject *buf)
 {
     for (Py_ssize_t i = 0; i < node->child_count; i++)
     {
@@ -278,7 +279,7 @@ static int render_block(ML_Node *node, ML_Context *ctx, ML_ObjList *buf)
 }
 
 static int render_conditional_block(ML_Node *node, ML_Context *ctx,
-                                    ML_ObjList *buf)
+                                    PyObject *buf)
 {
     if (!node->expr)
     {

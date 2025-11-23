@@ -5,6 +5,7 @@
 #include "micro_liquid/context.h"
 #include "micro_liquid/token.h"
 
+/// @brief Possible expression kinds.
 typedef enum
 {
     EXPR_BOOL = 1,
@@ -14,8 +15,6 @@ typedef enum
     EXPR_STR,
     EXPR_VAR
 } ML_ExpressionKind;
-
-// TODO: void *data instead of "Used by.."?
 
 /// @brief Internal expression type.
 typedef struct ML_Expr

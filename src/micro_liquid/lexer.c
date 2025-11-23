@@ -1,5 +1,41 @@
 #include "micro_liquid/lexer.h"
 
+/// @brief Push a new state onto the state stack.
+/// @return 0 on success, -1 on failure with an exception set.
+static int ML_Lexer_push(ML_Lexer *self, ML_State state);
+
+/// @brief Remove the state at the top of the state stack.
+/// @return The removed state or STATE_MARKUP if the stack is empty.
+static ML_State ML_Lexer_pop(ML_Lexer *self);
+
+/// Return the character at pos without advancing.
+static inline Py_UCS4 ML_Lexer_peek(ML_Lexer *self);
+
+/// @brief Advance pos while predicate pred is true.
+/// @return true if at least one character was accepted, false otherwise.
+static inline bool ML_Lexer_accept_while(PyObject *str, Py_ssize_t *pos,
+                                         bool (*pred)(Py_UCS4));
+
+/// @brief Advance pos by one if the character at pos is equal to ch.
+/// @return true if ch matched at pos, false otherwise.
+static inline bool ML_Lexer_accept_ch(PyObject *str, Py_ssize_t *pos, char ch);
+
+/// @brief Advance pos by the length of sstr if sstr matches a pos.
+/// @return true if sstr matched at pos, false otherwise.
+static inline bool ML_Lexer_accept_str(PyObject *str, Py_ssize_t *pos,
+                                       const char *sstr);
+
+/// @brief Keep advancing pos until we find an opening markup delimiter.
+/// @return true if pos was updated, false if we reached end of input.
+static inline bool ML_Lexer_accept_until_delim(PyObject *str, Py_ssize_t *pos);
+
+/// @brief Advance pos by word_length if word matches at pos as a whole word.
+/// @return true if pos was update, false otherwise.
+static inline bool ML_Lexer_accept_keyword(PyObject *str, Py_ssize_t *pos,
+                                           const char *word,
+                                           Py_ssize_t word_length);
+
+/// Lexer state handlers.
 static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self);
 static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self);
 static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self);
@@ -8,38 +44,32 @@ static ML_Token *ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote);
 static ML_Token *ML_Lexer_lex_whitespace_control(ML_Lexer *self);
 static ML_Token *ML_Lexer_lex_end_of_expr(ML_Lexer *self);
 
-static inline Py_UCS4 ML_Lexer_peek(ML_Lexer *self);
-
-static inline bool ML_Lexer_accept_while(PyObject *str, Py_ssize_t *pos,
-                                         bool (*pred)(Py_UCS4));
-
-static inline bool ML_Lexer_accept_until(PyObject *str, Py_ssize_t *pos,
-                                         bool (*pred)(Py_UCS4));
-
-static inline bool ML_Lexer_accept_until_ch(PyObject *str, Py_ssize_t *pos,
-                                            char ch);
-
-static inline bool ML_Lexer_accept_ch(PyObject *str, Py_ssize_t *pos, char ch);
-
-static inline bool ML_Lexer_accept_str(PyObject *str, Py_ssize_t *pos,
-                                       const char *sstr);
-
-static inline bool ML_Lexer_accept_until_delim(PyObject *str, Py_ssize_t *pos);
-
-static inline bool ML_Lexer_accept_keyword(PyObject *str, Py_ssize_t *pos,
-                                           const char *word,
-                                           Py_ssize_t word_length);
-
+/// Predicates for ML_Lexer_accept_while.
 static inline bool is_ascii_digit(Py_UCS4 ch);
-static inline bool is_ascii_alpha(Py_UCS4 ch);
 static inline bool is_space_char(Py_UCS4 ch);
 static inline bool is_whitespace_control(Py_UCS4 ch);
 static inline bool is_word_boundary(Py_UCS4 ch);
 static inline bool is_word_char_first(Py_UCS4 ch);
 static inline bool is_word_char(Py_UCS4 ch);
 
+typedef ML_Token *(*LexFn)(ML_Lexer *self);
+
+static LexFn state_table[] = {
+    [STATE_MARKUP] = ML_Lexer_lex_markup,
+    [STATE_TAG] = ML_Lexer_lex_tag,
+    [STATE_EXPR] = ML_Lexer_lex_expr,
+    [STATE_OTHER] = ML_Lexer_lex_other,
+    [STATE_WC] = ML_Lexer_lex_whitespace_control,
+};
+
 ML_Lexer *ML_Lexer_new(PyObject *str)
 {
+    Py_ssize_t length = PyUnicode_GetLength(str);
+    if (length < 0)
+    {
+        return NULL;
+    }
+
     ML_Lexer *lexer = PyMem_Malloc(sizeof(ML_Lexer));
 
     if (!lexer)
@@ -50,51 +80,44 @@ ML_Lexer *ML_Lexer_new(PyObject *str)
 
     Py_INCREF(str);
     lexer->str = str;
+    lexer->length = length;
     lexer->pos = 0;
-    ML_StateStack_init(&lexer->state);
-    ML_StateStack_push(&lexer->state, STATE_MARKUP);
+    lexer->state = NULL;
+    lexer->stack_size = 0;
+    lexer->stack_top = 0;
+
+    // TODO: check the return type of ML_Lexer_push throughout.
+    ML_Lexer_push(lexer, STATE_MARKUP);
     return lexer;
 }
 
 void ML_Lexer_dealloc(ML_Lexer *self)
 {
     Py_XDECREF(self->str);
-    ML_StateStack_clear(&self->state);
+    PyMem_Free(self->state);
+    self->state = NULL;
+    self->stack_size = 0;
+    self->stack_top = 0;
     PyMem_Free(self);
+    self->pos = 0;
 }
 
 ML_Token *ML_Lexer_next(ML_Lexer *self)
 {
-    PyObject *str = self->str;
-    Py_ssize_t length = PyUnicode_GetLength(str);
-    if (length < 0)
+    if (self->pos >= self->length)
     {
-        return NULL;
+        return ML_Token_new(self->length, self->length, TOK_EOF);
     }
 
-    if (self->pos >= length)
-    {
-        return ML_Token_new(length, length, TOK_EOF);
-    }
+    LexFn fn = state_table[ML_Lexer_pop(self)];
 
-    // TODO: branchless jump table?
-
-    switch (ML_StateStack_pop(&self->state))
+    if (!fn)
     {
-    case STATE_MARKUP:
-        return ML_Lexer_lex_markup(self);
-    case STATE_TAG:
-        return ML_Lexer_lex_tag(self);
-    case STATE_EXPR:
-        return ML_Lexer_lex_expr(self);
-    case STATE_OTHER:
-        return ML_Lexer_lex_other(self);
-    case STATE_WC:
-        return ML_Lexer_lex_whitespace_control(self);
-    default:
         PyErr_SetString(PyExc_ValueError, "unknown lexer state");
         return NULL;
     }
+
+    return fn(self);
 }
 
 ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
@@ -121,7 +144,8 @@ ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
         if (token_count >= capacity)
         {
             capacity *= 2;
-            ML_Token **tmp = PyMem_Realloc(tokens, capacity * sizeof(ML_Token));
+            ML_Token **tmp =
+                PyMem_Realloc(tokens, capacity * sizeof(ML_Token));
             if (!tmp)
             {
                 PyMem_Free(tokens);
@@ -147,11 +171,11 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
 
     if (ML_Lexer_accept_str(self->str, &self->pos, "{{"))
     {
-        ML_StateStack_push(&self->state, STATE_EXPR);
+        ML_Lexer_push(self, STATE_EXPR);
 
         if (is_whitespace_control(ML_Lexer_peek(self)))
         {
-            ML_StateStack_push(&self->state, STATE_WC);
+            ML_Lexer_push(self, STATE_WC);
         }
 
         return ML_Token_new(start, self->pos, TOK_OUT_START);
@@ -159,11 +183,11 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
 
     if (ML_Lexer_accept_str(self->str, &self->pos, "{%"))
     {
-        ML_StateStack_push(&self->state, STATE_TAG);
+        ML_Lexer_push(self, STATE_TAG);
 
         if (is_whitespace_control(ML_Lexer_peek(self)))
         {
-            ML_StateStack_push(&self->state, STATE_WC);
+            ML_Lexer_push(self, STATE_WC);
         }
 
         return ML_Token_new(start, self->pos, TOK_TAG_START);
@@ -174,7 +198,7 @@ static ML_Token *ML_Lexer_lex_markup(ML_Lexer *self)
 
 static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self)
 {
-    ML_StateStack_push(&self->state, STATE_EXPR);
+    ML_Lexer_push(self, STATE_EXPR);
     ML_Lexer_accept_while(self->str, &self->pos, is_space_char);
     Py_ssize_t start = self->pos;
 
@@ -217,7 +241,7 @@ static ML_Token *ML_Lexer_lex_expr(ML_Lexer *self)
     Py_ssize_t start = self->pos;
 
     Py_UCS4 ch = ML_Lexer_peek(self);
-    ML_StateStack_push(&self->state, STATE_EXPR);
+    ML_Lexer_push(self, STATE_EXPR);
 
     switch (ch)
     {
@@ -334,13 +358,13 @@ static ML_Token *ML_Lexer_lex_end_of_expr(ML_Lexer *self)
 
     if (ML_Lexer_accept_str(self->str, &self->pos, "%}"))
     {
-        ML_StateStack_pop(&self->state);
+        ML_Lexer_pop(self);
         return ML_Token_new(start, self->pos, TOK_TAG_END);
     }
 
     if (ML_Lexer_accept_str(self->str, &self->pos, "}}"))
     {
-        ML_StateStack_pop(&self->state);
+        ML_Lexer_pop(self);
         return ML_Token_new(start, self->pos, TOK_OUT_END);
     }
 
@@ -405,43 +429,6 @@ static inline bool ML_Lexer_accept_while(PyObject *str, Py_ssize_t *pos,
     {
         Py_UCS4 ch = PyUnicode_ReadChar(str, *pos);
         if (!pred(ch))
-        {
-            break;
-        }
-        (*pos)++;
-    }
-
-    return *pos > start;
-}
-
-static inline bool ML_Lexer_accept_until(PyObject *str, Py_ssize_t *pos,
-                                         bool (*pred)(Py_UCS4))
-{
-    Py_ssize_t start = *pos;
-    Py_ssize_t length = PyUnicode_GetLength(str);
-
-    while (*pos < length)
-    {
-        Py_UCS4 ch = PyUnicode_ReadChar(str, *pos);
-        if (pred(ch))
-        {
-            break;
-        }
-        (*pos)++;
-    }
-
-    return *pos > start;
-}
-
-static inline bool ML_Lexer_accept_until_ch(PyObject *str, Py_ssize_t *pos,
-                                            char ch)
-{
-    Py_ssize_t start = *pos;
-    Py_ssize_t length = PyUnicode_GetLength(str);
-
-    while (*pos < length)
-    {
-        if (PyUnicode_ReadChar(str, *pos) != (unsigned char)ch)
         {
             break;
         }
@@ -569,11 +556,6 @@ static inline bool is_ascii_digit(Py_UCS4 ch)
     return (ch >= '0' && ch <= '9');
 }
 
-static inline bool is_ascii_alpha(Py_UCS4 ch)
-{
-    return ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'));
-}
-
 static inline bool is_space_char(Py_UCS4 ch)
 {
     return (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r');
@@ -601,6 +583,41 @@ static inline bool is_word_char_first(Py_UCS4 ch)
 static inline bool is_word_char(Py_UCS4 ch)
 {
     return ((ch >= 0x80 && ch <= 0xFFFF) || (ch >= 'a' && ch <= 'z') ||
-            (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' ||
-            ch == '-');
+            (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
+            ch == '_' || ch == '-');
+}
+
+static int ML_Lexer_push(ML_Lexer *self, ML_State state)
+{
+    if (self->stack_top >= self->stack_size)
+    {
+        Py_ssize_t new_size = self->stack_size ? self->stack_size * 2 : 8;
+        ML_State *new_state = NULL;
+
+        if (!self->state)
+        {
+            new_state = PyMem_Malloc(sizeof(int) * new_size);
+        }
+        else
+        {
+            new_state = PyMem_Realloc(self->state, sizeof(int) * new_size);
+        }
+
+        if (!new_state)
+        {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        self->state = new_state;
+        self->stack_size = new_size;
+    }
+
+    self->state[self->stack_top++] = state;
+    return 0;
+}
+
+static inline ML_State ML_Lexer_pop(ML_Lexer *self)
+{
+    return self->stack_top ? self->state[--self->stack_top] : STATE_MARKUP;
 }

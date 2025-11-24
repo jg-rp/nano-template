@@ -1,11 +1,20 @@
+import json
+
+from minijinja import render_str
 from micro_liquid import render
 
 
-source = "{% for x in y %}{{ x }}, {% endfor %}"
-data = {"y": [1, 2, 3]}
+with open("tests/fixtures/001/index.template") as fd:
+    source = fd.read()
+
+with open("tests/fixtures/001/data.json") as fd:
+    data = json.load(fd)
 
 
-print(render(source, data))
+assert render(source, data) == render_str(source, name=None, **data)
+
+
+# print(render(source, data))
 
 
 # TODO: rename to _tokenize

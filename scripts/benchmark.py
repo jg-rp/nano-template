@@ -13,6 +13,9 @@ from micro_liquid import serialize
 from micro_liquid._native import Template as NativeTemplate
 from micro_liquid._native import render as native_render
 
+# XXX: I'm assuming `render_str` does not cache parsed templates if name is None.
+# from minijinja import render_str
+
 
 @dataclass
 class Fixture:
@@ -37,6 +40,7 @@ _TESTS = {
     "parse native": "NativeTemplate(source)",
     "parse and render ext": "render(source, data)",
     "parse and render native": "native_render(source, data)",
+    # "parse and render minijinja": "Environment().render_str(source, name=None, **data)",
     "just render ext": "t.render(data, serialize, Undefined)",
     "just render native": "nt.render(data)",
 }
@@ -59,6 +63,7 @@ def benchmark(path: str, number: int = 1000, repeat: int = 5) -> None:
         "t": t,
         "Undefined": Undefined,
         "serialize": serialize,
+        # "render_str": render_str,
     }
 
     print(
@@ -68,7 +73,7 @@ def benchmark(path: str, number: int = 1000, repeat: int = 5) -> None:
     for name, stmt in _TESTS.items():
         times = timeit.repeat(stmt, globals=_globals, repeat=repeat, number=number)
         print(
-            f"{name:<25}: best = {min(times):.6f}s | avg = {sum(times) / len(times):.6f}s"
+            f"{name:<30}: best = {min(times):.6f}s | avg = {sum(times) / len(times):.6f}s"
         )
 
 

@@ -122,6 +122,7 @@ ML_Token *ML_Lexer_next(ML_Lexer *self)
 
 ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
 {
+    // NOLINTNEXTLINE(readability-magic-numbers)
     Py_ssize_t capacity = 128;
     Py_ssize_t token_count = 0;
     ML_Token **tokens = PyMem_Malloc(sizeof(ML_Token) * capacity);
@@ -218,6 +219,7 @@ static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self)
         return ML_Token_new(start, self->pos, TOK_ELSE_TAG);
     }
 
+    // NOLINTNEXTLINE(readability-magic-numbers)
     if (ML_Lexer_accept_keyword(self->str, &self->pos, "endif", 5))
     {
         return ML_Token_new(start, self->pos, TOK_ENDIF_TAG);
@@ -228,6 +230,7 @@ static ML_Token *ML_Lexer_lex_tag(ML_Lexer *self)
         return ML_Token_new(start, self->pos, TOK_FOR_TAG);
     }
 
+    // NOLINTNEXTLINE(readability-magic-numbers)
     if (ML_Lexer_accept_keyword(self->str, &self->pos, "endfor", 6))
     {
         return ML_Token_new(start, self->pos, TOK_ENDFOR_TAG);
@@ -552,6 +555,8 @@ static inline bool ML_Lexer_accept_until_delim(PyObject *str, Py_ssize_t *pos)
     return *pos > start;
 }
 
+// NOLINTBEGIN(readability-magic-numbers)
+
 static inline bool is_ascii_digit(Py_UCS4 ch)
 {
     return (ch >= '0' && ch <= '9');
@@ -588,10 +593,13 @@ static inline bool is_word_char(Py_UCS4 ch)
             ch == '_' || ch == '-');
 }
 
+// NOLINTEND(readability-magic-numbers)
+
 static int ML_Lexer_push(ML_Lexer *self, ML_State state)
 {
     if (self->stack_top >= self->stack_size)
     {
+        // NOLINTNEXTLINE(readability-magic-numbers)
         Py_ssize_t new_size = self->stack_size ? self->stack_size * 2 : 8;
         ML_State *new_state = NULL;
 

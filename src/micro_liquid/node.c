@@ -145,7 +145,7 @@ static int render_output(ML_Node *node, ML_Context *ctx, PyObject *buf)
         goto fail;
     }
 
-    Py_ssize_t rv = StringBuffer_append(buf, str);
+    int rv = StringBuffer_append(buf, str);
     if (rv < 0)
     {
         goto fail;

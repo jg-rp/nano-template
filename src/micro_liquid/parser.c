@@ -50,7 +50,7 @@ static ML_Token *ML_Parser_eat_empty_tag(ML_Parser *self, ML_TokenKind kind);
 /// Assert that we're at a valid expression token.
 ///
 /// Set an exception and return -1 on failure. Return 0 on success.
-static inline Py_ssize_t ML_Parser_expect_expression(ML_Parser *self);
+static inline int ML_Parser_expect_expression(ML_Parser *self);
 
 /// Return true if we're at the start of a tag with kind `kind`.
 static inline bool ML_Parser_tag(ML_Parser *self, ML_TokenKind kind);
@@ -63,6 +63,8 @@ static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token);
 static ML_Node *ML_Parser_parse_output(ML_Parser *self);
 static ML_Node *ML_Parser_parse_tag(ML_Parser *self);
 static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self);
+static ML_Node *ML_Parser_parse_elif_tag(ML_Parser *self);
+static ML_Node *ML_Parser_parse_else_tag(ML_Parser *self);
 static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self);
 
 // Expression parsing methods.
@@ -260,7 +262,7 @@ static ML_Token *ML_Parser_eat_empty_tag(ML_Parser *self, ML_TokenKind kind)
     return token;
 }
 
-static inline Py_ssize_t ML_Parser_expect_expression(ML_Parser *self)
+static inline int ML_Parser_expect_expression(ML_Parser *self)
 {
     ML_Token *token = ML_Parser_current(self);
 
@@ -441,7 +443,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     tag = ML_Node_new(NODE_IF_TAG);
     if (!tag)
     {
-        return NULL;
+        goto fail;
     }
 
     node = ML_Node_new(NODE_IF_BLOCK);
@@ -485,46 +487,8 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     // Zero or more elif blocks.
     while (ML_Parser_tag(self, TOK_ELIF_TAG))
     {
-        node = ML_Node_new(NODE_ELIF_BLOCK);
+        node = ML_Parser_parse_elif_tag(self);
         if (!node)
-        {
-            goto fail;
-        }
-
-        if (!ML_Parser_eat(self, TOK_TAG_START))
-        {
-            goto fail;
-        }
-
-        ML_Parser_skip_wc(self);
-
-        if (!ML_Parser_eat(self, TOK_ELIF_TAG))
-        {
-            goto fail;
-        }
-
-        if (ML_Parser_expect_expression(self) < 0)
-        {
-            goto fail;
-        }
-
-        expr = ML_Parser_parse_primary(self, PREC_LOWEST);
-        if (!expr)
-        {
-            goto fail;
-        }
-
-        node->expr = expr;
-        expr = NULL;
-
-        ML_Parser_carry_wc(self);
-
-        if (!ML_Parser_eat(self, TOK_TAG_END))
-        {
-            goto fail;
-        }
-
-        if (ML_Parser_parse(self, node, END_IF_MASK) < 0)
         {
             goto fail;
         }
@@ -540,18 +504,8 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     // Optional else block.
     if (ML_Parser_tag(self, TOK_ELSE_TAG))
     {
-        node = ML_Node_new(NODE_ELSE_BLOCK);
+        node = ML_Parser_parse_else_tag(self);
         if (!node)
-        {
-            goto fail;
-        }
-
-        if (!ML_Parser_eat_empty_tag(self, TOK_ELSE_TAG))
-        {
-            goto fail;
-        }
-
-        if (ML_Parser_parse(self, node, END_IF_MASK) < 0)
         {
             goto fail;
         }
@@ -565,7 +519,6 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
 
     if (!ML_Parser_eat_empty_tag(self, TOK_ENDIF_TAG))
     {
-        node = NULL;
         goto fail;
     }
 
@@ -587,6 +540,104 @@ fail:
         ML_Node_dealloc(node);
         node = NULL;
     }
+    return NULL;
+}
+
+static ML_Node *ML_Parser_parse_elif_tag(ML_Parser *self)
+{
+    ML_Node *node = NULL;
+    ML_Expr *expr = NULL;
+
+    node = ML_Node_new(NODE_ELIF_BLOCK);
+    if (!node)
+    {
+        goto fail;
+    }
+
+    if (!ML_Parser_eat(self, TOK_TAG_START))
+    {
+        goto fail;
+    }
+
+    ML_Parser_skip_wc(self);
+
+    if (!ML_Parser_eat(self, TOK_ELIF_TAG))
+    {
+        goto fail;
+    }
+
+    if (ML_Parser_expect_expression(self) < 0)
+    {
+        goto fail;
+    }
+
+    expr = ML_Parser_parse_primary(self, PREC_LOWEST);
+    if (!expr)
+    {
+        goto fail;
+    }
+
+    node->expr = expr;
+    expr = NULL;
+
+    ML_Parser_carry_wc(self);
+
+    if (!ML_Parser_eat(self, TOK_TAG_END))
+    {
+        goto fail;
+    }
+
+    if (ML_Parser_parse(self, node, END_IF_MASK) < 0)
+    {
+        goto fail;
+    }
+
+    return node;
+
+fail:
+    if (node)
+    {
+        ML_Node_dealloc(node);
+        node = NULL;
+    }
+
+    if (expr)
+    {
+        ML_Expression_dealloc(expr);
+        expr = NULL;
+    }
+
+    return NULL;
+}
+
+static ML_Node *ML_Parser_parse_else_tag(ML_Parser *self)
+{
+    ML_Node *node = ML_Node_new(NODE_ELSE_BLOCK);
+
+    if (!node)
+    {
+        goto fail;
+    }
+
+    if (!ML_Parser_eat_empty_tag(self, TOK_ELSE_TAG))
+    {
+        goto fail;
+    }
+
+    if (ML_Parser_parse(self, node, END_IF_MASK) < 0)
+    {
+        goto fail;
+    }
+
+    return node;
+
+fail:
+    if (node)
+    {
+        ML_Node_dealloc(node);
+        node = NULL;
+    }
+
     return NULL;
 }
 
@@ -701,19 +752,25 @@ fail:
         Py_XDECREF(ident);
         ident = NULL;
     }
+
     if (expr)
     {
         ML_Expression_dealloc(expr);
         expr = NULL;
     }
+
     if (node)
     {
         ML_Node_dealloc(node);
+        node = NULL;
     }
+
     if (tag)
     {
         ML_Node_dealloc(tag);
+        tag = NULL;
     }
+
     return NULL;
 }
 
@@ -900,6 +957,7 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
         return NULL;
     }
 
+    // NOLINTNEXTLINE(readability-suspicious-call-argument)
     if (ML_Expression_add_child(infix_expr, left) < 0)
     {
         ML_Expression_dealloc(right);
@@ -907,6 +965,7 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
         return NULL;
     }
 
+    // NOLINTNEXTLINE(readability-suspicious-call-argument)
     if (ML_Expression_add_child(infix_expr, right) < 0)
     {
         // XXX: caller deallocates left on error but it is now owned by
@@ -1000,8 +1059,6 @@ static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self)
         break;
     case TOK_DOUBLE_QUOTE_STRING:
     case TOK_SINGLE_QUOTE_STRING:
-        segment = ML_Token_text(token, self->str);
-        break;
     case TOK_DOUBLE_ESC_STRING:
     case TOK_SINGLE_ESC_STRING:
         // TODO: unescape
@@ -1149,7 +1206,9 @@ static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right)
     {
         PyObject *tmp = PyObject_CallMethod(result, "lstrip", NULL);
         if (!tmp)
+        {
             goto fail;
+        }
         Py_DECREF(result);
         result = tmp;
     }
@@ -1157,7 +1216,9 @@ static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right)
     {
         PyObject *tmp = PyObject_CallMethod(result, "lstrip", "s", "\r\n");
         if (!tmp)
+        {
             goto fail;
+        }
         Py_DECREF(result);
         result = tmp;
     }
@@ -1166,7 +1227,9 @@ static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right)
     {
         PyObject *tmp = PyObject_CallMethod(result, "rstrip", NULL);
         if (!tmp)
+        {
             goto fail;
+        }
         Py_DECREF(result);
         result = tmp;
     }
@@ -1174,7 +1237,9 @@ static PyObject *trim(PyObject *value, ML_TokenKind left, ML_TokenKind right)
     {
         PyObject *tmp = PyObject_CallMethod(result, "rstrip", "s", "\r\n");
         if (!tmp)
+        {
             goto fail;
+        }
         Py_DECREF(result);
         result = tmp;
     }

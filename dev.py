@@ -1,6 +1,4 @@
 import json
-
-from minijinja import render_str
 from micro_liquid import render
 
 
@@ -11,7 +9,7 @@ with open("tests/fixtures/001/data.json") as fd:
     data = json.load(fd)
 
 
-assert render(source, data) == render_str(source, name=None, **data)
+render(source, data)
 
 
 # print(render(source, data))

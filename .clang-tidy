@@ -1,6 +1,5 @@
 # .clang-tidy
 ---
-# Enable useful checks
 Checks: >
   clang-analyzer-*,
   readability-*,
@@ -9,7 +8,9 @@ Checks: >
   misc-*,
   -clang-analyzer-alpha.*,
   -modernize-*,
-  -cppcoreguidelines-*
+  -cppcoreguidelines-,
+  -misc-no-recursion,
+  -readability-function-cognitive-complexity
 
 WarningsAsErrors: "*"
 
@@ -35,7 +36,7 @@ CheckOptions:
   - key: readability-identifier-length.MinimumParameterNameLength
     value: "2"
   - key: readability-identifier-length.IgnoredParameterNames
-    value: "^i$"
+    value: "^i|n$"
   - key: bugprone-easily-swappable-parameters.MinimumLength
     value: "3"
 

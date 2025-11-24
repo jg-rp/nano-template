@@ -13,7 +13,9 @@ int StringBuffer_append(PyObject *self, PyObject *str)
 PyObject *StringBuffer_finish(PyObject *self)
 {
     if (!self)
+    {
         return NULL;
+    }
 
     PyObject *empty = PyUnicode_FromString("");
     if (!empty)

@@ -8,6 +8,7 @@
 #include "micro_liquid/token.h"
 
 // TODO: doc comments
+// TODO: add recursion depth tracking
 
 typedef struct ML_Parser
 {

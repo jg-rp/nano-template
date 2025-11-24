@@ -10,9 +10,11 @@
 typedef struct ML_Context
 {
     PyObject *str;
+
     PyObject **scope;
     Py_ssize_t size;
     Py_ssize_t capacity;
+
     PyObject *serializer;
     PyObject *undefined;
 } ML_Context;

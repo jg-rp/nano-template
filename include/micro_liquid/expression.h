@@ -41,9 +41,9 @@ void ML_Expression_dealloc(ML_Expr *self);
 /// @return Arbitrary Python object, or NULL on failure.
 PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx);
 
-/// @brief Append a expression `child` to `self`.
+/// @brief Append expression `expr` to `self`.
 /// @return 0 on success, -1 on failure with an exception set.
-int ML_Expression_add_child(ML_Expr *self, ML_Expr *child);
+int ML_Expression_add_child(ML_Expr *self, ML_Expr *expr);
 
 /// @brief Append a Python object `obj` to `self`.
 /// @return 0 on success, -1 on failure with an exception set.

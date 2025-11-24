@@ -106,8 +106,6 @@ static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
     return token;
 }
 
-// TODO: ML_Token_destroy for symmetry
-
 // Assumes number of tokens is less than 32 or 64.
 typedef Py_ssize_t ML_TokenMask;
 

@@ -58,11 +58,15 @@ void ML_Expression_dealloc(ML_Expr *self)
             }
         }
         PyMem_Free(self->children);
+        self->children = NULL;
+        self->child_count = 0;
+        self->child_capacity = 0;
     }
 
     if (self->token)
     {
         PyMem_Free(self->token);
+        self->token = NULL;
     }
 
     if (self->objects)
@@ -72,12 +76,13 @@ void ML_Expression_dealloc(ML_Expr *self)
             Py_XDECREF(self->objects[i]);
         }
         PyMem_Free(self->objects);
+        self->objects = NULL;
     }
 
     PyMem_Free(self);
 }
 
-int ML_Expression_add_child(ML_Expr *self, ML_Expr *child)
+int ML_Expression_add_child(ML_Expr *self, ML_Expr *expr)
 {
     if (self->child_count == self->child_capacity)
     {
@@ -106,7 +111,7 @@ int ML_Expression_add_child(ML_Expr *self, ML_Expr *child)
         self->child_capacity = new_cap;
     }
 
-    self->children[self->child_count++] = child;
+    self->children[self->child_count++] = expr;
     return 0;
 }
 

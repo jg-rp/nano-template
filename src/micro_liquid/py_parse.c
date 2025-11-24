@@ -9,7 +9,7 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
     Py_ssize_t token_count = 0;
     ML_Lexer *lexer = NULL;
     ML_Parser *parser = NULL;
-    ML_NodeList *nodes = NULL;
+    ML_Node *root = NULL;
     PyObject *template = NULL;
 
     lexer = ML_Lexer_new(src);
@@ -33,27 +33,32 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
         goto fail;
     }
 
-    // TODO: allocate template here and pass to Parser_parse.
+    tokens = NULL;
 
-    nodes = ML_Parser_parse(parser, 0);
-    if (!nodes)
+    root = ML_Node_new(NODE_ROOT);
+    if (!root)
     {
         goto fail;
     }
 
-    template = MLPY_Template_new(src, nodes->items, nodes->size);
+    if (ML_Parser_parse(parser, root, 0) < 0)
+    {
+        goto fail;
+    }
+
+    template = MLPY_Template_new(src, root);
     if (!template)
     {
         goto fail;
     }
 
+    root = NULL;
     ML_Lexer_dealloc(lexer);
     ML_Parser_dealloc(parser);
-    ML_NodeList_disown(nodes);
     return template;
 
 fail:
-    if (!parser && tokens)
+    if (tokens)
     {
         for (Py_ssize_t j = 0; j < token_count; j++)
         {
@@ -63,21 +68,25 @@ fail:
             }
         }
         PyMem_Free(tokens);
+        tokens = NULL;
     }
 
     if (lexer)
     {
         ML_Lexer_dealloc(lexer);
+        lexer = NULL;
     }
 
     if (parser)
     {
         ML_Parser_dealloc(parser);
+        parser = NULL;
     }
 
-    if (!template && nodes)
+    if (root)
     {
-        ML_NodeList_dealloc(nodes);
+        ML_Node_dealloc(root);
+        root = NULL;
     }
 
     return NULL;

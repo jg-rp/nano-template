@@ -9,13 +9,6 @@
 
 // TODO: doc comments
 
-typedef struct ML_NodeList
-{
-    ML_Node **items;
-    Py_ssize_t size;
-    Py_ssize_t capacity;
-} ML_NodeList;
-
 typedef struct ML_Parser
 {
     PyObject *str;
@@ -30,13 +23,6 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
                          Py_ssize_t token_count);
 
 void ML_Parser_dealloc(ML_Parser *self);
-ML_NodeList *ML_Parser_parse(ML_Parser *self, ML_TokenMask end);
-
-// Helpers for building arrays of nodes.
-ML_NodeList *ML_NodeList_new(void);
-void ML_NodeList_dealloc(ML_NodeList *self);
-void ML_NodeList_disown(ML_NodeList *self);
-Py_ssize_t ML_NodeList_grow(ML_NodeList *self);
-Py_ssize_t ML_NodeList_append(ML_NodeList *self, ML_Node *node);
+int ML_Parser_parse(ML_Parser *self, ML_Node *out_node, ML_TokenMask end);
 
 #endif

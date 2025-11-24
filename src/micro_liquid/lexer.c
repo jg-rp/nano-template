@@ -124,7 +124,7 @@ ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
 {
     Py_ssize_t capacity = 128;
     Py_ssize_t token_count = 0;
-    ML_Token **tokens = PyMem_Malloc(capacity * sizeof(ML_Token));
+    ML_Token **tokens = PyMem_Malloc(sizeof(ML_Token) * capacity);
 
     if (!tokens)
     {
@@ -145,7 +145,8 @@ ML_Token **ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count)
         {
             capacity *= 2;
             ML_Token **tmp =
-                PyMem_Realloc(tokens, capacity * sizeof(ML_Token));
+                PyMem_Realloc(tokens, sizeof(ML_Token) * capacity);
+
             if (!tmp)
             {
                 PyMem_Free(tokens);

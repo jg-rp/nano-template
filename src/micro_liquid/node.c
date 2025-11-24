@@ -27,8 +27,7 @@ static int render_conditional_block(ML_Node *node, ML_Context *ctx,
 /// @return 0 on success, 1 if op is not iterable, -1 on error.
 static int iter(PyObject *op, PyObject **out_iter);
 
-ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
-                     Py_ssize_t child_count, ML_Expr *expr, PyObject *str)
+ML_Node *ML_Node_new(ML_NodeKind kind)
 {
     ML_Node *node = PyMem_Malloc(sizeof(ML_Node));
 
@@ -39,10 +38,11 @@ ML_Node *ML_Node_new(ML_NodeKind kind, ML_Node **children,
     }
 
     node->kind = kind;
-    node->children = children;
-    node->child_count = child_count;
-    node->expr = expr;
-    node->str = str;
+    node->children = NULL;
+    node->child_count = 0;
+    node->child_capacity = 0;
+    node->expr = NULL;
+    node->str = NULL;
     return node;
 }
 
@@ -53,7 +53,6 @@ void ML_Node_dealloc(ML_Node *self)
         return;
     }
 
-    // Recursively destroy nodes.
     if (self->children)
     {
         for (Py_ssize_t i = 0; i < self->child_count; i++)
@@ -64,14 +63,19 @@ void ML_Node_dealloc(ML_Node *self)
             }
         }
         PyMem_Free(self->children);
+        self->children = NULL;
+        self->child_count = 0;
+        self->child_capacity = 0;
     }
 
     if (self->expr)
     {
         ML_Expression_dealloc(self->expr);
+        self->expr = NULL;
     }
 
     Py_XDECREF(self->str);
+    self->str = NULL;
     PyMem_Free(self);
 }
 
@@ -89,6 +93,39 @@ int ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf)
         return -1;
     }
     return fn(self, ctx, buf);
+}
+
+int ML_Node_add_child(ML_Node *self, ML_Node *node)
+{
+    if (self->child_count == self->child_capacity)
+    {
+        Py_ssize_t new_cap =
+            (self->child_capacity == 0) ? 2 : (self->child_capacity * 2);
+
+        ML_Node **new_children = NULL;
+
+        if (!self->children)
+        {
+            new_children = PyMem_Malloc(sizeof(ML_Node *) * new_cap);
+        }
+        else
+        {
+            new_children =
+                PyMem_Realloc(self->children, sizeof(ML_Node *) * new_cap);
+        }
+
+        if (!new_children)
+        {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        self->children = new_children;
+        self->child_capacity = new_cap;
+    }
+
+    self->children[self->child_count++] = node;
+    return 0;
 }
 
 static int render_output(ML_Node *node, ML_Context *ctx, PyObject *buf)

@@ -8,17 +8,17 @@ void MLPY_Template_dealloc(PyObject *self)
 {
     MLPY_Template *op = (MLPY_Template *)self;
 
-    for (Py_ssize_t i = 0; i < op->node_count; i++)
+    if (op->root)
     {
-        ML_Node_dealloc(op->nodes[i]);
+        ML_Node_dealloc(op->root);
+        op->root = NULL;
     }
 
     Py_XDECREF(op->str);
     PyObject_Free(op);
 }
 
-PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
-                            Py_ssize_t node_count)
+PyObject *MLPY_Template_new(PyObject *str, ML_Node *root)
 {
 
     if (!Template_TypeObject)
@@ -37,8 +37,7 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
 
     Py_INCREF(str);
     op->str = str;
-    op->nodes = nodes;
-    op->node_count = node_count;
+    op->root = root;
     return obj;
 }
 
@@ -78,9 +77,11 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
         goto fail;
     }
 
-    for (Py_ssize_t i = 0; i < op->node_count; i++)
+    ML_Node *root = op->root;
+
+    for (Py_ssize_t i = 0; i < root->child_count; i++)
     {
-        if (ML_Node_render(op->nodes[i], ctx, buf) < 0)
+        if (ML_Node_render(root->children[i], ctx, buf) < 0)
         {
             goto fail;
         }

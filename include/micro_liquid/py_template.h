@@ -8,14 +8,12 @@
 typedef struct MLPY_Template
 {
     PyObject_HEAD PyObject *str;
-    ML_Node **nodes;
-    Py_ssize_t node_count;
+    ML_Node *root;
 } MLPY_Template;
 
 // TODO: doc comments
 
-PyObject *MLPY_Template_new(PyObject *str, ML_Node **nodes,
-                            Py_ssize_t node_count);
+PyObject *MLPY_Template_new(PyObject *str, ML_Node *root);
 
 void MLPY_Template_dealloc(PyObject *self);
 

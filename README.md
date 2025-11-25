@@ -1,3 +1,9 @@
+## Names
+
+Type names: RawRegion, ObjectRegion
+Variable/parameter names: mem, raw_mem, obj_mem
+Functions: RawRegion_alloc(), RawRegion_free(), etc.
+
 ```
 PySys_WriteStdout("ch: %c\n", ch);
 ```

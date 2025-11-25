@@ -13,7 +13,7 @@ from micro_liquid import serialize
 from micro_liquid._native import Template as NativeTemplate
 from micro_liquid._native import render as native_render
 
-# XXX: I'm assuming `render_str` does not cache parsed templates if name is None.
+# XXX: I'm assuming `render_str` does not cache parsed templates.
 # from minijinja import render_str
 
 

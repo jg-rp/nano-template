@@ -9,6 +9,23 @@ static uintptr_t align_forward(uintptr_t ptr, Py_ssize_t align);
 /// @brief Reallocate objs.
 static int ML_Mem_grow_refs(ML_Mem *self);
 
+ML_Mem *ML_Mem_new(void)
+{
+    ML_Mem *mem = PyMem_Malloc(sizeof(ML_Mem));
+    if (!mem)
+    {
+        return NULL;
+    }
+
+    if (ML_Mem_init(mem) < 0)
+    {
+        PyMem_Free(mem);
+        return NULL;
+    }
+
+    return mem;
+}
+
 int ML_Mem_init(ML_Mem *self)
 {
     ML_MemBlock *block = ML_Mem_new_block(NULL, DEFAULT_BLOCK_SIZE);
@@ -18,6 +35,9 @@ int ML_Mem_init(ML_Mem *self)
     }
 
     self->head = block;
+    self->objs = NULL;
+    self->obj_count = 0;
+    self->obj_capacity = 0;
     return 0;
 }
 
@@ -112,9 +132,16 @@ void ML_Mem_free(ML_Mem *self)
 static int ML_Mem_grow_refs(ML_Mem *self)
 {
     Py_ssize_t new_cap = (self->obj_capacity < 8) ? 8 : self->obj_capacity * 2;
+    PyObject **new_objs = NULL;
 
-    PyObject **new_objs =
-        PyMem_Realloc(self->objs, sizeof(PyObject *) * new_cap);
+    if (!self->objs)
+    {
+        new_objs = PyMem_Malloc(sizeof(PyObject *) * new_cap);
+    }
+    else
+    {
+        new_objs = PyMem_Realloc(self->objs, sizeof(PyObject *) * new_cap);
+    }
 
     if (!new_objs)
     {

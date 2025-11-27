@@ -13,7 +13,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     }
 
     Py_ssize_t token_count = 0;
-    ML_Token **tokens = ML_Lexer_scan(lexer, &token_count);
+    ML_Token *tokens = ML_Lexer_scan(lexer, &token_count);
     if (!tokens)
     {
         ML_Lexer_dealloc(lexer);
@@ -28,9 +28,9 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
 
     for (Py_ssize_t i = 0; i < token_count; i++)
     {
-        ML_Token *token = tokens[i];
+        ML_Token token = tokens[i];
         PyObject *view =
-            MLPY_TokenView_new(str, token->start, token->end, token->kind);
+            MLPY_TokenView_new(str, token.start, token.end, token.kind);
 
         if (!view)
         {
@@ -42,8 +42,6 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
             Py_DECREF(view);
             goto fail;
         }
-
-        PyMem_Free(token);
     }
 
     PyMem_Free(tokens);
@@ -53,14 +51,8 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
 fail:
     if (tokens)
     {
-        for (Py_ssize_t j = 0; j < token_count; j++)
-        {
-            if (tokens[j])
-            {
-                PyMem_Free(tokens[j]);
-            }
-        }
         PyMem_Free(tokens);
+        tokens = NULL;
     }
     ML_Lexer_dealloc(lexer);
     Py_XDECREF(list);

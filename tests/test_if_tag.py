@@ -36,7 +36,7 @@ def test_nested_if() -> None:
 def test_elsif() -> None:
     source = "{% if a %}a{% elsif b %}b{% else %}c{% endif %}"
     data = {"a": False, "b": True}
-    with pytest.raises(TemplateSyntaxError):
+    with pytest.raises(TemplateSyntaxError, match="unknown tag"):
         render(source, data)
 
 

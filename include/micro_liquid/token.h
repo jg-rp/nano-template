@@ -89,20 +89,12 @@ typedef struct ML_Token
     ML_TokenKind kind;
 } ML_Token;
 
-static inline ML_Token *ML_Token_new(Py_ssize_t start, Py_ssize_t end,
+/// @brief Make a new token.
+/// @return The new token by value.
+static inline ML_Token ML_Token_make(Py_ssize_t start, Py_ssize_t end,
                                      ML_TokenKind kind)
 {
-    ML_Token *token = (ML_Token *)PyMem_Malloc(sizeof(ML_Token));
-
-    if (!token)
-    {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    token->start = start;
-    token->end = end;
-    token->kind = kind;
+    ML_Token token = {start, end, kind};
     return token;
 }
 
@@ -112,6 +104,21 @@ typedef Py_ssize_t ML_TokenMask;
 static inline bool ML_Token_mask_test(ML_TokenKind kind, ML_TokenMask mask)
 {
     return (mask & ((Py_ssize_t)1 << kind)) != 0;
+}
+
+static inline ML_Token *ML_Token_copy(ML_Token *self)
+{
+    ML_Token *token = (ML_Token *)PyMem_Malloc(sizeof(ML_Token));
+    if (!token)
+    {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    token->start = self->start;
+    token->end = self->end;
+    token->kind = self->kind;
+    return token;
 }
 
 #endif

@@ -23,6 +23,11 @@ typedef struct ML_Mem
     Py_ssize_t obj_capacity;
 } ML_Mem;
 
+/// @brief Allocate and initialize a new allocator with a single block.
+/// @return A pointer to the new allocator, or NULL on failure with an
+/// exception set.
+ML_Mem *ML_Mem_new(void);
+
 /// @brief Initialize allocator with a single empty block.
 /// @return 0 on success, -1 on failure.
 int ML_Mem_init(ML_Mem *self);

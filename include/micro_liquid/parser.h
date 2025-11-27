@@ -14,13 +14,13 @@ typedef struct ML_Parser
 {
     PyObject *str;
     Py_ssize_t length; // XXX: why do we need this?
-    ML_Token **tokens;
+    ML_Token *tokens;
     Py_ssize_t token_count;
     Py_ssize_t pos;
     ML_TokenKind whitespace_carry;
 } ML_Parser;
 
-ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
+ML_Parser *ML_Parser_new(PyObject *str, ML_Token *tokens,
                          Py_ssize_t token_count);
 
 void ML_Parser_dealloc(ML_Parser *self);

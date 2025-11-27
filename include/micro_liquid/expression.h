@@ -19,9 +19,6 @@ typedef enum
 /// @brief Internal expression type.
 typedef struct ML_Expr
 {
-    ML_ExpressionKind kind;
-    ML_Token *token;
-
     struct ML_Expr **children;
     Py_ssize_t child_count;
     Py_ssize_t child_capacity;
@@ -29,6 +26,9 @@ typedef struct ML_Expr
     PyObject **objects;
     Py_ssize_t object_count;
     Py_ssize_t object_capacity;
+
+    ML_Token *token;
+    ML_ExpressionKind kind;
 } ML_Expr;
 
 /// @brief Allocate and initialize a new ML_Expression.

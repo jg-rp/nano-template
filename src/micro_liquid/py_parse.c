@@ -5,11 +5,11 @@
 
 PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
 {
-    ML_Token **tokens = NULL;
-    Py_ssize_t token_count = 0;
     ML_Lexer *lexer = NULL;
-    ML_Parser *parser = NULL;
     ML_Node *root = NULL;
+    ML_Parser *parser = NULL;
+    ML_Token *tokens = NULL;
+    Py_ssize_t token_count = 0;
     PyObject *template = NULL;
 
     lexer = ML_Lexer_new(src);
@@ -60,13 +60,6 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
 fail:
     if (tokens)
     {
-        for (Py_ssize_t j = 0; j < token_count; j++)
-        {
-            if (tokens[j])
-            {
-                PyMem_Free(tokens[j]);
-            }
-        }
         PyMem_Free(tokens);
         tokens = NULL;
     }

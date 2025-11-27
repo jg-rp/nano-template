@@ -102,7 +102,7 @@ static const ML_TokenMask TERMINATE_EXPR_MASK =
 static const ML_TokenMask PATH_PUNCTUATION_MASK =
     ((Py_ssize_t)1 << TOK_DOT) | ((Py_ssize_t)1 << TOK_L_BRACKET);
 
-ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
+ML_Parser *ML_Parser_new(PyObject *str, ML_Token *tokens,
                          Py_ssize_t token_count)
 {
     ML_Parser *parser = PyMem_Malloc(sizeof(ML_Parser));
@@ -124,19 +124,10 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token **tokens,
 
 void ML_Parser_dealloc(ML_Parser *self)
 {
-    ML_Token **tokens = self->tokens;
-    Py_ssize_t token_count = self->token_count;
-
-    if (tokens)
+    if (self->tokens)
     {
-        for (Py_ssize_t j = 0; j < token_count; j++)
-        {
-            if (tokens[j])
-            {
-                PyMem_Free(tokens[j]);
-            }
-        }
-        PyMem_Free(tokens);
+        PyMem_Free(self->tokens);
+        self->tokens = NULL;
     }
 
     Py_XDECREF(self->str);
@@ -191,20 +182,20 @@ static inline ML_Token *ML_Parser_next(ML_Parser *self)
     if (self->pos >= self->token_count)
     {
         // Last token is always EOF
-        return self->tokens[self->token_count - 1];
+        return &self->tokens[self->token_count - 1];
     }
 
-    return self->tokens[self->pos++];
+    return &self->tokens[self->pos++];
 }
 
 static inline ML_Token *ML_Parser_current(ML_Parser *self)
 {
     if (self->pos >= self->token_count)
     {
-        return self->tokens[self->token_count - 1];
+        return &self->tokens[self->token_count - 1];
     }
 
-    return self->tokens[self->pos];
+    return &self->tokens[self->pos];
 }
 
 static inline ML_Token *ML_Parser_peek(ML_Parser *self)
@@ -212,10 +203,10 @@ static inline ML_Token *ML_Parser_peek(ML_Parser *self)
     if (self->pos + 1 >= self->token_count)
     {
         // Last token is always EOF
-        return self->tokens[self->token_count - 1];
+        return &self->tokens[self->token_count - 1];
     }
 
-    return self->tokens[self->pos + 1];
+    return &self->tokens[self->pos + 1];
 }
 
 static inline ML_Token *ML_Parser_peek_n(ML_Parser *self, Py_ssize_t n)
@@ -223,10 +214,10 @@ static inline ML_Token *ML_Parser_peek_n(ML_Parser *self, Py_ssize_t n)
     if (self->pos + n >= self->token_count)
     {
         // Last token is always EOF
-        return self->tokens[self->token_count - 1];
+        return &self->tokens[self->token_count - 1];
     }
 
-    return self->tokens[self->pos + n];
+    return &self->tokens[self->pos + n];
 }
 
 static inline ML_Token *ML_Parser_eat(ML_Parser *self, ML_TokenKind kind)
@@ -984,12 +975,16 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
     ML_TokenKind kind = token->kind;
     PyObject *obj = NULL;
 
-    // TODO: deallocate copy token on error.
-    ML_Expr *expr = ML_Expression_new(
-        EXPR_VAR, ML_Token_new(token->start, token->end, token->kind));
+    ML_Token *token_ptr = ML_Token_copy(token);
+    if (!token_ptr)
+    {
+        return NULL;
+    }
 
+    ML_Expr *expr = ML_Expression_new(EXPR_VAR, token_ptr);
     if (!expr)
     {
+        PyMem_Free(token_ptr);
         return NULL;
     }
 

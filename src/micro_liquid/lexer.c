@@ -367,7 +367,8 @@ static ML_Token ML_Lexer_lex_end_of_expr(ML_Lexer *self)
     }
 
     self->pos++;
-    return ML_Token_make(start, self->pos, TOK_UNKNOWN);
+    PyErr_SetString(PyExc_RuntimeError, "unknown token");
+    return ML_Token_make(start, self->pos, TOK_ERROR);
 }
 
 static ML_Token ML_Lexer_lex_string(ML_Lexer *self, Py_UCS4 quote)

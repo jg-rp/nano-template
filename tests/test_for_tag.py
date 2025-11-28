@@ -46,9 +46,7 @@ def test_loop_target_is_undefined() -> None:
 def test_limit_is_not_allowed() -> None:
     source = "{% for x in y limit: 2 %}{% endfor %}"
     data = {"y": [1, 2, 3]}
-    with pytest.raises(
-        TemplateSyntaxError, match="expected TOK_TAG_END, found TOK_WORD"
-    ):
+    with pytest.raises(TemplateSyntaxError, match="unknown token"):
         render(source, data)
 
 

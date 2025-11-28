@@ -70,7 +70,6 @@ static const char *ML_TokenKind_names[] = {
     [TOK_NOT] = "TOK_NOT",
     [TOK_IN] = "TOK_IN",
     [TOK_ERROR] = "TOK_ERROR",
-    [TOK_UNKNOWN] = "TOK_UNKNOWN",
     [TOK_EOF] = "TOK_EOF"};
 
 static inline const char *ML_TokenKind_str(ML_TokenKind kind)

@@ -14,6 +14,7 @@ ML_Mem *ML_Mem_new(void)
     ML_Mem *mem = PyMem_Malloc(sizeof(ML_Mem));
     if (!mem)
     {
+        PyErr_NoMemory();
         return NULL;
     }
 

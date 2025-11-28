@@ -16,7 +16,7 @@ typedef enum
 
 typedef struct ML_Lexer
 {
-    PyObject *str;
+    Py_UCS4 *str;
     Py_ssize_t length;
     Py_ssize_t pos;
     ML_State *state;
@@ -25,15 +25,15 @@ typedef struct ML_Lexer
 } ML_Lexer;
 
 ML_Lexer *ML_Lexer_new(PyObject *str);
-void ML_Lexer_dealloc(ML_Lexer *self);
+void ML_Lexer_dealloc(ML_Lexer *l);
 
 /// @brief Scan the next token.
 /// @return The next token, or NULL on error with an exception set.
-ML_Token ML_Lexer_next(ML_Lexer *self);
+ML_Token ML_Lexer_next(ML_Lexer *l);
 
 /// @brief Scan all tokens.
 /// @return An array of tokens with TOK_EOF as the last token, or NULL on
 /// error.
-ML_Token *ML_Lexer_scan(ML_Lexer *self, Py_ssize_t *out_token_count);
+ML_Token *ML_Lexer_scan(ML_Lexer *l, Py_ssize_t *out_token_count);
 
 #endif

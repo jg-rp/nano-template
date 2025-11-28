@@ -1,15 +1,23 @@
 import json
+from micro_liquid import tokenize
 from micro_liquid import render
 
 
-with open("tests/fixtures/001/index.template") as fd:
-    source = fd.read()
+# with open("tests/fixtures/001/index.template") as fd:
+#     source = fd.read()
 
-with open("tests/fixtures/001/data.json") as fd:
-    data = json.load(fd)
+source = "Hello {% if true %}{{ you }}{% endif %}!"
+
+# with open("tests/fixtures/001/data.json") as fd:
+#     data = json.load(fd)
+
+data = {"you": "WORLD", "true": True}
 
 
-render(source, data)
+for token in tokenize(source):
+    print(token)
+
+print(render(source, data))
 
 
 # print(render(source, data))

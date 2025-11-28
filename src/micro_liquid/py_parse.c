@@ -1,4 +1,5 @@
 #include "micro_liquid/py_parse.h"
+#include "micro_liquid/allocator.h"
 #include "micro_liquid/lexer.h"
 #include "micro_liquid/parser.h"
 #include "micro_liquid/py_template.h"
@@ -6,6 +7,7 @@
 PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
 {
     ML_Lexer *lexer = NULL;
+    ML_Mem *ast = NULL;
     ML_Node *root = NULL;
     ML_Parser *parser = NULL;
     ML_Token *tokens = NULL;
@@ -24,10 +26,13 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
         goto fail;
     }
 
-    // TODO: have Parser_new create the lexer and tokens so we don't
-    // need to worry about who owns them.
+    ast = ML_Mem_new();
+    if (!ast)
+    {
+        goto fail;
+    }
 
-    parser = ML_Parser_new(src, tokens, token_count);
+    parser = ML_Parser_new(ast, src, tokens, token_count);
     if (!parser)
     {
         goto fail;
@@ -35,18 +40,13 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
 
     tokens = NULL;
 
-    root = ML_Node_new(NODE_ROOT);
+    root = ML_Parser_parse_root(parser);
     if (!root)
     {
         goto fail;
     }
 
-    if (ML_Parser_parse(parser, root, 0) < 0)
-    {
-        goto fail;
-    }
-
-    template = MLPY_Template_new(src, root);
+    template = MLPY_Template_new(src, root, ast);
     if (!template)
     {
         goto fail;
@@ -76,10 +76,10 @@ fail:
         parser = NULL;
     }
 
-    if (root)
+    if (ast)
     {
-        ML_Node_dealloc(root);
-        root = NULL;
+        ML_Mem_free(ast);
+        ast = NULL;
     }
 
     return NULL;

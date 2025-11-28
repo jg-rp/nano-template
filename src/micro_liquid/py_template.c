@@ -7,18 +7,12 @@ static PyTypeObject *Template_TypeObject = NULL;
 void MLPY_Template_dealloc(PyObject *self)
 {
     MLPY_Template *op = (MLPY_Template *)self;
-
-    if (op->root)
-    {
-        ML_Node_dealloc(op->root);
-        op->root = NULL;
-    }
-
+    ML_Mem_free(op->ast);
     Py_XDECREF(op->str);
     PyObject_Free(op);
 }
 
-PyObject *MLPY_Template_new(PyObject *str, ML_Node *root)
+PyObject *MLPY_Template_new(PyObject *str, ML_Node *root, ML_Mem *ast)
 {
 
     if (!Template_TypeObject)
@@ -38,6 +32,7 @@ PyObject *MLPY_Template_new(PyObject *str, ML_Node *root)
     Py_INCREF(str);
     op->str = str;
     op->root = root;
+    op->ast = ast;
     return obj;
 }
 
@@ -78,13 +73,19 @@ static PyObject *MLPY_Template_render(PyObject *self, PyObject *args)
     }
 
     ML_Node *root = op->root;
+    ML_NodePage *page = root->head;
 
-    for (Py_ssize_t i = 0; i < root->child_count; i++)
+    while (page)
     {
-        if (ML_Node_render(root->children[i], ctx, buf) < 0)
+        for (Py_ssize_t i = 0; i < page->count; i++)
         {
-            goto fail;
+            if (ML_Node_render(page->nodes[i], ctx, buf) < 0)
+            {
+                goto fail;
+            }
         }
+
+        page = page->next;
     }
 
     rv = StringBuffer_finish(buf);

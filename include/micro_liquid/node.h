@@ -5,6 +5,8 @@
 #include "micro_liquid/context.h"
 #include "micro_liquid/expression.h"
 
+#define ML_CHILDREN_PER_PAGE 4
+
 /// @brief AST node kinds.
 typedef enum
 {
@@ -19,31 +21,33 @@ typedef enum
     NODE_TEXT
 } ML_NodeKind;
 
+/// @brief One block of a paged array holding AST nodes.
+typedef struct ML_NodePage
+{
+    struct ML_NodePage *next;
+    Py_ssize_t count;
+    struct ML_Node *nodes[ML_CHILDREN_PER_PAGE];
+} ML_NodePage;
+
 /// @brief Internal AST node.
 typedef struct ML_Node
 {
-    ML_NodeKind kind;
+    // Paged array holding child nodes.
+    ML_NodePage *head;
+    ML_NodePage *tail;
 
-    struct ML_Node **children;
-    Py_ssize_t child_count;
-    Py_ssize_t child_capacity;
-
+    // Optional expression, like a conditional or loop expression.
     ML_Expr *expr;
+
+    // Optional string object associated with the node. Like the name of a loop
+    // variable or literal text.
     PyObject *str;
+
+    ML_NodeKind kind;
 } ML_Node;
 
-/// @brief Allocate and initialize a new ML_Node.
-/// @return Newly allocated ML_Node*, or NULL on memory error.
-ML_Node *ML_Node_new(ML_NodeKind kind);
-
-void ML_Node_dealloc(ML_Node *self);
-
-/// @brief Render a node to `buf` with data from `ctx`.
+/// @brief Render node `node` to `buf` with data from `ctx`.
 /// @return 0 on success, -1 on failure with a Python error set.
-int ML_Node_render(ML_Node *self, ML_Context *ctx, PyObject *buf);
-
-/// @brief Append node `child` to `self`.
-/// @return 0 on success, -1 on failure with an exception set.
-int ML_Node_add_child(ML_Node *self, ML_Node *node);
+int ML_Node_render(ML_Node *node, ML_Context *ctx, PyObject *buf);
 
 #endif

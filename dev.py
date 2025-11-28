@@ -22,9 +22,21 @@ render(source, data)
 # TODO: be consistent with integer return codes. -1 and 0
 
 
-# TODO: model node children as linked nodes, every node has hat most one child.
-# TODO: move ML_Node_new to ML_Parser_node
-# TODO: `ML_Node_add_child` becomes `node->child = node`
-# TODO: move ML_Expr_new to ML_Parser_expr
+# TODO: model node children as a paged array
+# TODO: move ML_Node_new to ML_Parser_make_node
+# TODO: `ML_Node_add_child` becomes `ML_Node_add_child`
+# TODO: move ML_Expr_new to `ML_Parser_make_expr`
 # TODO: change ML_Expr to have `left` and `right`, not `children`
-# TODO:
+# TODO: change ML_Expr.objects to be a paged array
+
+
+# TODO: compare valgrind output before and after arena
+
+# ==15356== LEAK SUMMARY:
+# ==15356==    definitely lost: 0 bytes in 0 blocks
+# ==15356==    indirectly lost: 0 bytes in 0 blocks
+# ==15356==      possibly lost: 395,096 bytes in 4 blocks
+# ==15356==    still reachable: 2,979 bytes in 7 blocks
+# ==15356==         suppressed: 0 bytes in 0 blocks
+# ==15356==
+# ==15356== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)

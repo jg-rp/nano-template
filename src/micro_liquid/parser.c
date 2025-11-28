@@ -1,6 +1,7 @@
 #include "micro_liquid/parser.h"
 #include <stdarg.h>
 
+/// @brief Operator precedence for our recursive descent parser.
 typedef enum
 {
     PREC_LOWEST = 1,
@@ -9,10 +10,27 @@ typedef enum
     PREC_PRE
 } Precedence;
 
+/// @brief Allocate and initialize a new node in parser p's arena.
+/// @return A pointer to the new node, or NULL on error.
+static ML_Node *ML_Parser_make_node(ML_Parser *p, ML_NodeKind kind);
+
+/// @brief Add node `child` to node `parent`.
+/// @return 0 on success, -1 on failure.
+static int ML_Parser_add_node(ML_Parser *p, ML_Node *parent, ML_Node *child);
+
+/// @brief Allocate and initialize a new expression in parser p's arena.
+/// @return A pointer to the new expression, or NULL on error.
+static ML_Expr *ML_Parser_make_expr(ML_Parser *p, ML_ExprKind kind,
+                                    ML_Token *token);
+
+/// @brief Add object `obj` to expression `expr`.
+/// @return 0 oon success, -1 on failure.
+static int ML_Parser_add_obj(ML_Parser *p, ML_Expr *expr, PyObject *obj);
+
 /// Return the precedence for the given token kind.
 static inline Precedence precedence(ML_TokenKind kind);
 
-/// Set a RuntimeError and return NULL.
+/// Set a RuntimeError with details from `token` and return NULL.
 static void *parser_error(ML_Token *token, const char *fmt, ...);
 
 /// Advance the parser if the current token is a whitespace control token.
@@ -102,7 +120,7 @@ static const ML_TokenMask TERMINATE_EXPR_MASK =
 static const ML_TokenMask PATH_PUNCTUATION_MASK =
     ((Py_ssize_t)1 << TOK_DOT) | ((Py_ssize_t)1 << TOK_L_BRACKET);
 
-ML_Parser *ML_Parser_new(PyObject *str, ML_Token *tokens,
+ML_Parser *ML_Parser_new(ML_Mem *mem, PyObject *str, ML_Token *tokens,
                          Py_ssize_t token_count)
 {
     ML_Parser *parser = PyMem_Malloc(sizeof(ML_Parser));
@@ -113,6 +131,8 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token *tokens,
     }
 
     Py_INCREF(str);
+
+    parser->mem = mem;
     parser->str = str;
     parser->length = PyUnicode_GetLength(str);
     parser->tokens = tokens;
@@ -122,43 +142,164 @@ ML_Parser *ML_Parser_new(PyObject *str, ML_Token *tokens,
     return parser;
 }
 
-void ML_Parser_dealloc(ML_Parser *self)
+static ML_Node *ML_Parser_make_node(ML_Parser *p, ML_NodeKind kind)
 {
-    if (self->tokens)
+    ML_Node *node = ML_Mem_alloc(p->mem, sizeof(ML_Node));
+    if (!node)
     {
-        PyMem_Free(self->tokens);
-        self->tokens = NULL;
+        return NULL;
     }
 
-    Py_XDECREF(self->str);
-    PyMem_Free(self);
+    node->kind = kind;
+    node->expr = NULL;
+    node->head = NULL;
+    node->tail = NULL;
+    node->str = NULL;
+    return node;
 }
 
-int ML_Parser_parse(ML_Parser *self, ML_Node *out_node, ML_TokenMask end)
+static int ML_Parser_add_node(ML_Parser *p, ML_Node *parent, ML_Node *child)
+{
+    if (!parent->tail)
+    {
+        ML_NodePage *page = ML_Mem_alloc(p->mem, sizeof(ML_NodePage));
+        if (!page)
+        {
+            return -1;
+        }
+
+        page->next = NULL;
+        page->count = 0;
+        parent->head = page;
+        parent->tail = page;
+    }
+
+    if (parent->tail->count == ML_CHILDREN_PER_PAGE)
+    {
+        ML_NodePage *new_page = ML_Mem_alloc(p->mem, sizeof(ML_NodePage));
+        if (!new_page)
+        {
+            return -1;
+        }
+
+        new_page->next = NULL;
+        new_page->count = 0;
+        parent->tail->next = new_page;
+        parent->tail = new_page;
+    }
+
+    ML_NodePage *page = parent->tail;
+    page->nodes[page->count++] = child;
+    return 0;
+}
+
+static ML_Expr *ML_Parser_make_expr(ML_Parser *p, ML_ExprKind kind,
+                                    ML_Token *token)
+{
+    ML_Expr *expr = ML_Mem_alloc(p->mem, sizeof(ML_Expr));
+    if (!expr)
+    {
+        return NULL;
+    }
+
+    expr->kind = kind;
+    expr->token = token;
+    expr->head = NULL;
+    expr->tail = NULL;
+    expr->left = NULL;
+    expr->right = NULL;
+    return expr;
+}
+
+static int ML_Parser_add_obj(ML_Parser *p, ML_Expr *expr, PyObject *obj)
+{
+    if (!expr->tail)
+    {
+        ML_ObjPage *page = ML_Mem_alloc(p->mem, sizeof(ML_ObjPage));
+        if (!page)
+        {
+            return -1;
+        }
+
+        page->next = NULL;
+        page->count = 0;
+        expr->head = page;
+        expr->tail = page;
+    }
+
+    if (expr->tail->count == ML_OBJ_PRE_PAGE)
+    {
+        ML_ObjPage *new_page = ML_Mem_alloc(p->mem, sizeof(ML_ObjPage));
+        if (!new_page)
+        {
+            return -1;
+        }
+
+        new_page->next = NULL;
+        new_page->count = 0;
+        expr->tail->next = new_page;
+        expr->tail = new_page;
+    }
+
+    ML_ObjPage *page = expr->tail;
+    page->objs[page->count++] = obj;
+    ML_Mem_ref(p->mem, obj);
+    return 0;
+}
+
+void ML_Parser_dealloc(ML_Parser *p)
+{
+    if (p->tokens)
+    {
+        PyMem_Free(p->tokens);
+        p->tokens = NULL;
+    }
+
+    Py_XDECREF(p->str);
+    PyMem_Free(p);
+}
+
+ML_Node *ML_Parser_parse_root(ML_Parser *p)
+{
+    ML_Node *root = ML_Parser_make_node(p, NODE_ROOT);
+    if (!root)
+    {
+        return NULL;
+    }
+
+    if (ML_Parser_parse(p, root, 0) < 0)
+    {
+        return NULL;
+    }
+
+    return root;
+}
+
+int ML_Parser_parse(ML_Parser *p, ML_Node *out_node, ML_TokenMask end)
 {
     for (;;)
     {
         // Stop if we're at the end of a block.
-        if (ML_Parser_end_block(self, end))
+        if (ML_Parser_end_block(p, end))
         {
             return 0;
         }
 
-        ML_Token *token = ML_Parser_next(self);
+        ML_Token *token = ML_Parser_next(p);
         ML_Node *node = NULL;
 
         switch (token->kind)
         {
         case TOK_OTHER:
-            node = ML_Parser_parse_text(self, token);
+            node = ML_Parser_parse_text(p, token);
             break;
 
         case TOK_OUT_START:
-            node = ML_Parser_parse_output(self);
+            node = ML_Parser_parse_output(p);
             break;
 
         case TOK_TAG_START:
-            node = ML_Parser_parse_tag(self);
+            node = ML_Parser_parse_tag(p);
             break;
 
         case TOK_EOF:
@@ -170,7 +311,7 @@ int ML_Parser_parse(ML_Parser *self, ML_Node *out_node, ML_TokenMask end)
             return -1;
         }
 
-        if (!node || ML_Node_add_child(out_node, node) < 0)
+        if (!node || ML_Parser_add_node(p, out_node, node) < 0)
         {
             return -1;
         }
@@ -369,7 +510,7 @@ static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
         return NULL;
     }
 
-    ML_Node *node = ML_Node_new(NODE_TEXT);
+    ML_Node *node = ML_Parser_make_node(self, NODE_TEXT);
     if (!node)
     {
         Py_DECREF(trimmed);
@@ -377,6 +518,7 @@ static ML_Node *ML_Parser_parse_text(ML_Parser *self, ML_Token *token)
     }
 
     node->str = trimmed;
+    ML_Mem_steal_ref(self->mem, trimmed);
     return node;
 }
 
@@ -397,10 +539,9 @@ static ML_Node *ML_Parser_parse_output(ML_Parser *self)
         return NULL;
     }
 
-    ML_Node *node = ML_Node_new(NODE_OUPUT);
+    ML_Node *node = ML_Parser_make_node(self, NODE_OUPUT);
     if (!node)
     {
-        ML_Expression_dealloc(expr);
         return NULL;
     }
 
@@ -431,13 +572,13 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     ML_Node *node = NULL;
     ML_Node *tag = NULL;
 
-    tag = ML_Node_new(NODE_IF_TAG);
+    tag = ML_Parser_make_node(self, NODE_IF_TAG);
     if (!tag)
     {
         goto fail;
     }
 
-    node = ML_Node_new(NODE_IF_BLOCK);
+    node = ML_Parser_make_node(self, NODE_IF_BLOCK);
     if (!node)
     {
         goto fail;
@@ -469,7 +610,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
         goto fail;
     }
 
-    if (ML_Node_add_child(tag, node) < 0)
+    if (ML_Parser_add_node(self, tag, node) < 0)
     {
         goto fail;
     }
@@ -484,7 +625,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_Node_add_child(tag, node) < 0)
+        if (ML_Parser_add_node(self, tag, node) < 0)
         {
             goto fail;
         }
@@ -501,7 +642,7 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_Node_add_child(tag, node) < 0)
+        if (ML_Parser_add_node(self, tag, node) < 0)
         {
             goto fail;
         }
@@ -516,21 +657,6 @@ static ML_Node *ML_Parser_parse_if_tag(ML_Parser *self)
     return tag;
 
 fail:
-    if (expr)
-    {
-        ML_Expression_dealloc(expr);
-        expr = NULL;
-    }
-    if (tag)
-    {
-        ML_Node_dealloc(tag);
-        tag = NULL;
-    }
-    if (node)
-    {
-        ML_Node_dealloc(node);
-        node = NULL;
-    }
     return NULL;
 }
 
@@ -539,7 +665,7 @@ static ML_Node *ML_Parser_parse_elif_tag(ML_Parser *self)
     ML_Node *node = NULL;
     ML_Expr *expr = NULL;
 
-    node = ML_Node_new(NODE_ELIF_BLOCK);
+    node = ML_Parser_make_node(self, NODE_ELIF_BLOCK);
     if (!node)
     {
         goto fail;
@@ -586,24 +712,12 @@ static ML_Node *ML_Parser_parse_elif_tag(ML_Parser *self)
     return node;
 
 fail:
-    if (node)
-    {
-        ML_Node_dealloc(node);
-        node = NULL;
-    }
-
-    if (expr)
-    {
-        ML_Expression_dealloc(expr);
-        expr = NULL;
-    }
-
     return NULL;
 }
 
 static ML_Node *ML_Parser_parse_else_tag(ML_Parser *self)
 {
-    ML_Node *node = ML_Node_new(NODE_ELSE_BLOCK);
+    ML_Node *node = ML_Parser_make_node(self, NODE_ELSE_BLOCK);
 
     if (!node)
     {
@@ -623,12 +737,6 @@ static ML_Node *ML_Parser_parse_else_tag(ML_Parser *self)
     return node;
 
 fail:
-    if (node)
-    {
-        ML_Node_dealloc(node);
-        node = NULL;
-    }
-
     return NULL;
 }
 
@@ -639,7 +747,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
     ML_Node *node = NULL;
     ML_Node *tag = NULL;
 
-    tag = ML_Node_new(NODE_FOR_TAG);
+    tag = ML_Parser_make_node(self, NODE_FOR_TAG);
     if (!tag)
     {
         return NULL;
@@ -658,6 +766,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
     }
 
     tag->str = ident;
+    ML_Mem_steal_ref(self->mem, ident);
     ident = NULL;
 
     if (!ML_Parser_eat(self, TOK_IN))
@@ -686,7 +795,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
         goto fail;
     }
 
-    node = ML_Node_new(NODE_FOR_BLOCK);
+    node = ML_Parser_make_node(self, NODE_FOR_BLOCK);
     if (!node)
     {
         goto fail;
@@ -697,7 +806,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
         goto fail;
     }
 
-    if (ML_Node_add_child(tag, node) < 0)
+    if (ML_Parser_add_node(self, tag, node) < 0)
     {
         goto fail;
     }
@@ -707,7 +816,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
     // Optional else block.
     if (ML_Parser_tag(self, TOK_ELSE_TAG))
     {
-        node = ML_Node_new(NODE_ELSE_BLOCK);
+        node = ML_Parser_make_node(self, NODE_ELSE_BLOCK);
         if (!node)
         {
             goto fail;
@@ -723,7 +832,7 @@ static ML_Node *ML_Parser_parse_for_tag(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_Node_add_child(tag, node) < 0)
+        if (ML_Parser_add_node(self, tag, node) < 0)
         {
             goto fail;
         }
@@ -744,24 +853,6 @@ fail:
         ident = NULL;
     }
 
-    if (expr)
-    {
-        ML_Expression_dealloc(expr);
-        expr = NULL;
-    }
-
-    if (node)
-    {
-        ML_Node_dealloc(node);
-        node = NULL;
-    }
-
-    if (tag)
-    {
-        ML_Node_dealloc(tag);
-        tag = NULL;
-    }
-
     return NULL;
 }
 
@@ -778,7 +869,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     case TOK_SINGLE_ESC_STRING:
     case TOK_DOUBLE_ESC_STRING:
         // TODO: unescape
-        left = ML_Expression_new(EXPR_STR, NULL);
+        left = ML_Parser_make_expr(self, EXPR_STR, NULL);
         if (!left)
         {
             goto fail;
@@ -790,7 +881,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
             goto fail;
         }
 
-        if (ML_Expression_add_obj(left, str) < 0)
+        if (ML_Parser_add_obj(self, left, str) < 0)
         {
             Py_DECREF(str);
             goto fail;
@@ -823,12 +914,6 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
         token = ML_Parser_current(self);
         kind = token->kind;
 
-        if (kind == TOK_UNKNOWN) // TODO: TOK_ERR
-        {
-            parser_error(token, "unknown token");
-            goto fail;
-        }
-
         if (kind == TOK_EOF || !ML_Token_mask_test(kind, BIN_OP_MASK) ||
             precedence(kind) < prec)
         {
@@ -845,10 +930,6 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     return left;
 
 fail:
-    if (left)
-    {
-        ML_Expression_dealloc(left);
-    }
     return NULL;
 }
 
@@ -867,7 +948,6 @@ static ML_Expr *ML_Parser_parse_group(ML_Parser *self)
 
     if (!ML_Parser_eat(self, TOK_R_PAREN))
     {
-        ML_Expression_dealloc(expr);
         return NULL;
     }
 
@@ -892,7 +972,7 @@ static ML_Expr *ML_Parser_parse_not(ML_Parser *self)
         return NULL;
     }
 
-    ML_Expr *not_expr = ML_Expression_new(EXPR_NOT, NULL);
+    ML_Expr *not_expr = ML_Parser_make_expr(self, EXPR_NOT, NULL);
     if (!not_expr)
     {
         return NULL;
@@ -904,13 +984,7 @@ static ML_Expr *ML_Parser_parse_not(ML_Parser *self)
         return NULL;
     }
 
-    if (ML_Expression_add_child(not_expr, expr) < 0)
-    {
-        ML_Expression_dealloc(expr);
-        ML_Expression_dealloc(not_expr);
-        return NULL;
-    }
-
+    not_expr->right = expr;
     return not_expr;
 }
 
@@ -924,48 +998,29 @@ static ML_Expr *ML_Parser_parse_infix(ML_Parser *self, ML_Expr *left)
 
     if (!right)
     {
-        // ML_Expression_dealloc(left);
         return NULL;
     }
 
     switch (kind)
     {
     case TOK_AND:
-        infix_expr = ML_Expression_new(EXPR_AND, NULL);
+        infix_expr = ML_Parser_make_expr(self, EXPR_AND, NULL);
         break;
     case TOK_OR:
-        infix_expr = ML_Expression_new(EXPR_OR, NULL);
+        infix_expr = ML_Parser_make_expr(self, EXPR_OR, NULL);
         break;
     default:
-        ML_Expression_dealloc(right);
         parser_error(token, "unexpected operator '%s'",
                      ML_TokenKind_str(kind));
     };
 
     if (!infix_expr)
     {
-        ML_Expression_dealloc(right);
         return NULL;
     }
 
-    // NOLINTNEXTLINE(readability-suspicious-call-argument)
-    if (ML_Expression_add_child(infix_expr, left) < 0)
-    {
-        ML_Expression_dealloc(right);
-        ML_Expression_dealloc(infix_expr);
-        return NULL;
-    }
-
-    // NOLINTNEXTLINE(readability-suspicious-call-argument)
-    if (ML_Expression_add_child(infix_expr, right) < 0)
-    {
-        // XXX: caller deallocates left on error but it is now owned by
-        // infix_expr.
-        ML_Expression_dealloc(right);
-        ML_Expression_dealloc(infix_expr);
-        return NULL;
-    }
-
+    infix_expr->left = left;
+    infix_expr->right = right;
     return infix_expr;
 }
 
@@ -981,7 +1036,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
         return NULL;
     }
 
-    ML_Expr *expr = ML_Expression_new(EXPR_VAR, token_ptr);
+    ML_Expr *expr = ML_Parser_make_expr(self, EXPR_VAR, token_ptr);
     if (!expr)
     {
         PyMem_Free(token_ptr);
@@ -997,7 +1052,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_Expression_add_obj(expr, str) == -1)
+        if (ML_Parser_add_obj(self, expr, str) == -1)
         {
             goto fail;
         }
@@ -1025,7 +1080,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
             goto fail;
         }
 
-        if (ML_Expression_add_obj(expr, obj) == -1)
+        if (ML_Parser_add_obj(self, expr, obj) == -1)
         {
             goto fail;
         }
@@ -1034,10 +1089,7 @@ static ML_Expr *ML_Parser_parse_path(ML_Parser *self)
     }
 
 fail:
-    if (expr)
-    {
-        ML_Expression_dealloc(expr);
-    }
+    // TODO:
     Py_XDECREF(obj);
     return NULL;
 }

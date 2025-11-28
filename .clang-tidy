@@ -36,7 +36,7 @@ CheckOptions:
   - key: readability-identifier-length.MinimumParameterNameLength
     value: "2"
   - key: readability-identifier-length.IgnoredParameterNames
-    value: "^i|n$"
+    value: "^i|n|p$"
   - key: bugprone-easily-swappable-parameters.MinimumLength
     value: "3"
 

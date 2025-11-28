@@ -5,6 +5,8 @@
 #include "micro_liquid/context.h"
 #include "micro_liquid/token.h"
 
+#define ML_OBJ_PRE_PAGE 4
+
 /// @brief Possible expression kinds.
 typedef enum
 {
@@ -14,39 +16,37 @@ typedef enum
     EXPR_OR,
     EXPR_STR,
     EXPR_VAR
-} ML_ExpressionKind;
+} ML_ExprKind;
+
+/// @brief One block of a paged array holding Python objects.
+typedef struct ML_ObjPage
+{
+    struct ML_ObjPage *next;
+    Py_ssize_t count;
+    PyObject *objs[ML_OBJ_PRE_PAGE];
+} ML_ObjPage;
 
 /// @brief Internal expression type.
 typedef struct ML_Expr
 {
-    struct ML_Expr **children;
-    Py_ssize_t child_count;
-    Py_ssize_t child_capacity;
+    // Child expressions, like the left and right hand side of the `or`
+    // operator.
+    struct ML_Expr *left;
+    struct ML_Expr *right;
 
-    PyObject **objects;
-    Py_ssize_t object_count;
-    Py_ssize_t object_capacity;
+    // Paged array holding Python objects, like segments in a variable path.
+    ML_ObjPage *head;
+    ML_ObjPage *tail;
 
+    // Optional token, used by EXPR_VAR to give the `Undefined` class line and
+    // column numbers.
     ML_Token *token;
-    ML_ExpressionKind kind;
+
+    ML_ExprKind kind;
 } ML_Expr;
-
-/// @brief Allocate and initialize a new ML_Expression.
-/// @return Newly allocated ML_Expression*, or NULL on memory error.
-ML_Expr *ML_Expression_new(ML_ExpressionKind kind, ML_Token *token);
-
-void ML_Expression_dealloc(ML_Expr *self);
 
 /// @brief Evaluate expression `self` with data from context `ctx`.
 /// @return Arbitrary Python object, or NULL on failure.
 PyObject *ML_Expression_evaluate(ML_Expr *self, ML_Context *ctx);
-
-/// @brief Append expression `expr` to `self`.
-/// @return 0 on success, -1 on failure with an exception set.
-int ML_Expression_add_child(ML_Expr *self, ML_Expr *expr);
-
-/// @brief Append a Python object `obj` to `self`.
-/// @return 0 on success, -1 on failure with an exception set.
-int ML_Expression_add_obj(ML_Expr *self, PyObject *obj);
 
 #endif

@@ -16,7 +16,7 @@ typedef enum
 
 typedef struct ML_Lexer
 {
-    Py_UCS4 *str;
+    PyObject *str;
     Py_ssize_t length;
     Py_ssize_t pos;
     ML_State *state;

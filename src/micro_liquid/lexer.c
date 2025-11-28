@@ -77,14 +77,8 @@ ML_Lexer *ML_Lexer_new(PyObject *str)
         return NULL;
     }
 
-    Py_UCS4 *buf = PyUnicode_AsUCS4Copy(str);
-    if (!buf)
-    {
-        PyMem_Free(lexer);
-        return NULL;
-    }
-
-    lexer->str = buf;
+    Py_INCREF(str);
+    lexer->str = str;
     lexer->length = length;
     lexer->pos = 0;
     lexer->state = NULL;
@@ -98,7 +92,7 @@ ML_Lexer *ML_Lexer_new(PyObject *str)
 
 void ML_Lexer_dealloc(ML_Lexer *l)
 {
-    PyMem_Free(l->str);
+    Py_DECREF(l->str);
     PyMem_Free(l->state);
     l->state = NULL;
     l->stack_size = 0;
@@ -422,12 +416,17 @@ static ML_Token ML_Lexer_lex_string(ML_Lexer *l, Py_UCS4 quote)
 
 static inline Py_UCS4 ML_Lexer_read_char(ML_Lexer *l)
 {
-    return l->pos >= l->length ? (Py_UCS4)-1 : l->str[l->pos];
+    // NOTE: PyUnicode_READ_CHAR does give a decent performance boost, but is
+    // not part of the stable ABI.
+    //
+    // Using PyUnicode_AsUCS4Copy and working from the buffer benchmarks about
+    // the same as PyUnicode_ReadChar.
+    return PyUnicode_ReadChar(l->str, l->pos);
 }
 
 static inline Py_UCS4 ML_Lexer_read_char_n(ML_Lexer *l, Py_ssize_t n)
 {
-    return n >= l->length ? (Py_UCS4)-1 : l->str[n];
+    return PyUnicode_ReadChar(l->str, n);
 }
 
 static inline bool ML_Lexer_accept_while(ML_Lexer *l, bool (*pred)(Py_UCS4))
@@ -538,7 +537,7 @@ static inline bool ML_Lexer_accept_until_delim(ML_Lexer *l)
 
     while (l->pos < length)
     {
-
+        // TODO: benchmark PyUnicode_FindChar
         Py_ssize_t found = -1;
 
         for (Py_ssize_t i = l->pos; i < length; i++)

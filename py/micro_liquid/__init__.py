@@ -6,7 +6,7 @@ from typing import Type
 
 from ._micro_liquid import Template
 from ._micro_liquid import TokenView
-from ._micro_liquid import parse
+from ._micro_liquid import parse as _parse
 from ._micro_liquid import tokenize
 from ._token_kind import TokenKind
 from ._undefined import Undefined
@@ -35,6 +35,19 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
+def parse(source: str) -> Template:
+    """Parse `source` as a template."""
+    try:
+        return _parse(source)
+    except RuntimeError as err:
+        raise TemplateSyntaxError(
+            str(err),
+            source=source,
+            start_index=getattr(err, "start_index", -1),
+            stop_index=getattr(err, "stop_index", -1),
+        ) from None
+
+
 def render(
     source: str,
     data: Mapping[str, Any],
@@ -44,7 +57,7 @@ def render(
 ) -> str:
     """Render template `source` with variables from `data`."""
     try:
-        return parse(source).render(data, serializer, undefined)
+        return _parse(source).render(data, serializer, undefined)
     except RuntimeError as err:
         raise TemplateSyntaxError(
             str(err),

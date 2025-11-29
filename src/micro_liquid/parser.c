@@ -1,5 +1,6 @@
 #include "micro_liquid/parser.h"
-#include <stdarg.h>
+#include "micro_liquid/error.h"
+#include "micro_liquid/unescape.h"
 
 /// @brief Operator precedence for our recursive descent parser.
 typedef enum
@@ -861,21 +862,42 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     ML_Expr *left = NULL;
     ML_Token *token = ML_Parser_current(self);
     ML_TokenKind kind = token->kind;
+    PyObject *str = NULL;
 
     switch (kind)
     {
     case TOK_SINGLE_QUOTE_STRING:
     case TOK_DOUBLE_QUOTE_STRING:
-    case TOK_SINGLE_ESC_STRING:
-    case TOK_DOUBLE_ESC_STRING:
-        // TODO: unescape
         left = ML_Parser_make_expr(self, EXPR_STR, NULL);
         if (!left)
         {
             goto fail;
         }
 
-        PyObject *str = ML_Token_text(token, self->str);
+        str = ML_Token_text(token, self->str);
+        if (!str)
+        {
+            goto fail;
+        }
+
+        if (ML_Parser_add_obj(self, left, str) < 0)
+        {
+            goto fail;
+        }
+
+        Py_DECREF(str);
+        str = NULL;
+        self->pos++;
+        break;
+    case TOK_SINGLE_ESC_STRING:
+    case TOK_DOUBLE_ESC_STRING:
+        left = ML_Parser_make_expr(self, EXPR_STR, NULL);
+        if (!left)
+        {
+            goto fail;
+        }
+
+        str = unescape(token, self->str);
         if (!str)
         {
             goto fail;
@@ -888,6 +910,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
         }
 
         Py_DECREF(str);
+        str = NULL;
         self->pos++;
         break;
     case TOK_L_PAREN:
@@ -930,6 +953,7 @@ static ML_Expr *ML_Parser_parse_primary(ML_Parser *self, Precedence prec)
     return left;
 
 fail:
+    Py_XDECREF(str);
     return NULL;
 }
 
@@ -1106,10 +1130,11 @@ static PyObject *ML_Parser_parse_bracketed_path_segment(ML_Parser *self)
         break;
     case TOK_DOUBLE_QUOTE_STRING:
     case TOK_SINGLE_QUOTE_STRING:
+        segment = ML_Token_text(token, self->str);
+        break;
     case TOK_DOUBLE_ESC_STRING:
     case TOK_SINGLE_ESC_STRING:
-        // TODO: unescape
-        segment = ML_Token_text(token, self->str);
+        segment = unescape(token, self->str);
         break;
     case TOK_R_BRACKET:
         parser_error(token, "empty bracketed segment");
@@ -1159,64 +1184,6 @@ static PyObject *ML_Parser_parse_shorthand_path_selector(ML_Parser *self)
     }
 
     return segment;
-}
-
-static void *parser_error(ML_Token *token, const char *fmt, ...)
-{
-    PyObject *exc_instance = NULL;
-    PyObject *start_obj = NULL;
-    PyObject *end_obj = NULL;
-    PyObject *msg_obj = NULL;
-
-    va_list vargs;
-    va_start(vargs, fmt);
-    msg_obj = PyUnicode_FromFormatV(fmt, vargs);
-    va_end(vargs);
-
-    if (!msg_obj)
-    {
-        goto fail;
-    }
-
-    exc_instance =
-        PyObject_CallFunctionObjArgs(PyExc_RuntimeError, msg_obj, NULL);
-    if (!exc_instance)
-    {
-        goto fail;
-    }
-
-    start_obj = PyLong_FromSsize_t(token->start);
-    if (!start_obj)
-    {
-        goto fail;
-    }
-
-    end_obj = PyLong_FromSsize_t(token->end);
-    if (!end_obj)
-    {
-        goto fail;
-    }
-
-    if (PyObject_SetAttrString(exc_instance, "start_index", start_obj) < 0 ||
-        PyObject_SetAttrString(exc_instance, "stop_index", end_obj) < 0)
-    {
-        goto fail;
-    }
-
-    Py_DECREF(start_obj);
-    Py_DECREF(end_obj);
-    Py_DECREF(msg_obj);
-
-    PyErr_SetObject(PyExc_RuntimeError, exc_instance);
-    Py_DECREF(exc_instance);
-    return NULL;
-
-fail:
-    Py_XDECREF(start_obj);
-    Py_XDECREF(end_obj);
-    Py_XDECREF(msg_obj);
-    Py_XDECREF(exc_instance);
-    return NULL;
 }
 
 static inline PyObject *ML_Token_text(ML_Token *self, PyObject *str)

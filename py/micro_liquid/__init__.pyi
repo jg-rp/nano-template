@@ -5,7 +5,6 @@ from typing import Type
 
 from ._micro_liquid import Template
 from ._micro_liquid import TokenView
-from ._micro_liquid import parse
 from ._micro_liquid import tokenize
 from ._token_kind import TokenKind
 from ._undefined import Undefined
@@ -30,6 +29,7 @@ __all__ = (
 )
 
 def serialize(obj: object) -> str: ...
+def parse(source: str) -> Template: ...
 def render(
     source: str,
     data: Mapping[str, Any],

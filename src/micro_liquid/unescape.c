@@ -1,9 +1,12 @@
 #include "micro_liquid/unescape.h"
+#include "micro_liquid/error.h"
 #include "micro_liquid/string_buffer.h"
+#include "micro_liquid/token.h"
 
 /// @brief Parse hex digits in `str` starting at position `pos`.
 /// @return A code point, or -1 on failure with an exception set.
-static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos);
+static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
+                                         ML_Token *token);
 
 /// Return true is `code_point` is a high surrogate, false otherwise.
 static inline bool is_high_surrogate(int code_point);
@@ -15,28 +18,37 @@ static inline bool is_low_surrogate(int code_point);
 /// position `pos`.
 /// @return A new Unicode object, or NULL on failure with an exception set.
 static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
-                                       Py_ssize_t length);
+                                       Py_ssize_t length, ML_Token *token);
 
 /// @brief Decode a `\X`, `\uXXXX` or `\uXXXX\uXXXX` sequence in `str` starting
 /// at position `pos`.
 /// @return A new Unicode object, or NULL on failure with an exception set.
 static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
-                               Py_ssize_t length, QuoteKind quote);
+                               Py_ssize_t length, ML_Token *token);
 
-PyObject *unescape(PyObject *str, QuoteKind quote)
+PyObject *unescape(ML_Token *token, PyObject *source)
 {
+    PyObject *result = NULL;
+    PyObject *buf = NULL;
+    PyObject *str = NULL;
     PyObject *substring = NULL;
 
-    Py_ssize_t length = PyUnicode_GetLength(str);
-    if (!length)
+    str = PyUnicode_Substring(source, token->start, token->end);
+    if (!str)
     {
         return NULL;
     }
 
-    PyObject *buf = StringBuffer_new();
+    Py_ssize_t length = PyUnicode_GetLength(str);
+    if (!length)
+    {
+        goto cleanup;
+    }
+
+    buf = StringBuffer_new();
     if (!buf)
     {
-        return NULL;
+        goto cleanup;
     }
 
     Py_ssize_t pos = 0;
@@ -50,12 +62,12 @@ PyObject *unescape(PyObject *str, QuoteKind quote)
             substring = PyUnicode_Substring(str, pos, length);
             if (!substring)
             {
-                goto fail;
+                goto cleanup;
             }
 
             if (StringBuffer_append(buf, substring) < 0)
             {
-                goto fail;
+                goto cleanup;
             }
 
             Py_DECREF(substring);
@@ -69,53 +81,56 @@ PyObject *unescape(PyObject *str, QuoteKind quote)
             substring = PyUnicode_Substring(str, pos, index);
             if (!substring)
             {
-                goto fail;
+                goto cleanup;
             }
 
             if (StringBuffer_append(buf, substring) < 0)
             {
-                goto fail;
+                goto cleanup;
             }
 
             Py_DECREF(substring);
             substring = NULL;
         }
 
-        substring = decode_escape(str, &pos, length, quote);
+        substring = decode_escape(str, &pos, length, token);
         if (!substring)
         {
-            goto fail;
+            goto cleanup;
         }
 
         if (StringBuffer_append(buf, substring) < 0)
         {
-            goto fail;
+            goto cleanup;
         }
 
         Py_DECREF(substring);
         substring = NULL;
     }
 
-    return StringBuffer_finish(buf);
+    result = StringBuffer_finish(buf);
+    buf = NULL;
+    // Fall through
 
-fail:
+cleanup:
+    Py_XDECREF(str);
     Py_XDECREF(substring);
     Py_XDECREF(buf);
-    return NULL;
+    return result;
 }
 
 static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
-                               Py_ssize_t length, QuoteKind quote)
+                               Py_ssize_t length, ML_Token *token)
 {
     (*pos)++; // Move past `\`
     if (*pos >= length)
     {
-        PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+        parser_error(token, "invalid escape sequence");
         return NULL;
     }
 
     Py_UCS4 ch = PyUnicode_ReadChar(str, *pos);
-    if (ch < 0)
+    if (ch == (Py_UCS4)-1)
     {
         return NULL;
     }
@@ -125,16 +140,16 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
     switch (ch)
     {
     case '"':
-        if (quote == QUOTE_SINGLE)
+        if (token->kind == TOK_SINGLE_ESC_STRING)
         {
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "invalid '\\\"' escape sequence");
             return NULL;
         }
         return PyUnicode_FromOrdinal('"');
     case '\'':
-        if (quote == QUOTE_DOUBLE)
+        if (token->kind == TOK_DOUBLE_ESC_STRING)
         {
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "invalid '\\'' escape sequence");
             return NULL;
         }
         return PyUnicode_FromOrdinal('\'');
@@ -153,40 +168,40 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
     case 't':
         return PyUnicode_FromOrdinal('\t');
     case 'u':
-        return decode_unicode_escape(str, pos, length);
+        return decode_unicode_escape(str, pos, length, token);
     default:
-        PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+        parser_error(token, "unknown escape sequence '\\%c'", ch);
         return NULL;
     }
 }
 
 static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
-                                       Py_ssize_t length)
+                                       Py_ssize_t length, ML_Token *token)
 {
     if (*pos + 3 >= length)
     {
-        PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+        parser_error(token, "incomplete escape sequence");
         return NULL;
     }
 
-    Py_UCS4 code_point = code_point_from_digits(str, pos);
-    if (code_point < 0)
+    Py_UCS4 code_point = code_point_from_digits(str, pos, token);
+    if (code_point == (Py_UCS4)-1)
     {
         return NULL;
     }
 
     if (is_low_surrogate(code_point))
     {
-        PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+        parser_error(token, "unexpected low surrogate");
         return NULL;
     }
 
     if (is_high_surrogate(code_point))
     {
         // Expect `\uXXXX`
-        if (*pos + 6 <= length)
+        if (*pos + 5 >= length)
         {
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "incomplete escape sequence");
             return NULL;
         }
 
@@ -195,20 +210,21 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
 
         if (slash != '\\' || u != 'u')
         {
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "expected low surrogate");
             return NULL;
         }
 
         (*pos) += 2;
-        Py_UCS4 low_surrogate = code_point_from_digits(str, pos);
-        if (low_surrogate < 0)
+
+        Py_UCS4 low_surrogate = code_point_from_digits(str, pos, token);
+        if (low_surrogate == (Py_UCS4)-1)
         {
             return NULL;
         }
 
         if (!is_low_surrogate(low_surrogate))
         {
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "expected low surrogate");
             return NULL;
         }
 
@@ -229,14 +245,15 @@ static inline bool is_low_surrogate(int code_point)
     return code_point >= 0xDC00 && code_point <= 0xDFFF;
 }
 
-static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos)
+static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
+                                         ML_Token *token)
 {
     int code_point = 0;
 
     for (Py_ssize_t i = 0; i < 4; i++)
     {
         Py_UCS4 digit = PyUnicode_ReadChar(str, *pos);
-        if (digit < 0)
+        if (digit == (Py_UCS4)-1)
         {
             return -1;
         }
@@ -274,7 +291,8 @@ static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos)
             code_point |= (digit - 'A' + 10);
             break;
         default:
-            PyErr_SetString(PyExc_ValueError, "invalid escape sequence");
+            parser_error(token, "invalid hex digit `%c` in escape sequence",
+                         digit);
             return -1;
         }
 

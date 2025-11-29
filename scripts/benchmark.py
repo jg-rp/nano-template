@@ -46,7 +46,7 @@ _TESTS = {
 }
 
 
-def benchmark(path: str, number: int = 1000, repeat: int = 5) -> None:
+def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
     """Run the benchmark against fixture `path`. Print results to stdout."""
     fixture = Fixture.load(Path(path))
     t = parse(fixture.source)

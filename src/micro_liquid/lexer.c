@@ -537,18 +537,7 @@ static inline bool ML_Lexer_accept_until_delim(ML_Lexer *l)
 
     while (l->pos < length)
     {
-        // TODO: benchmark PyUnicode_FindChar
-        // Py_ssize_t found - PyUnicode_Find(l->str, '{', l->pos, 1)
-        Py_ssize_t found = -1;
-
-        for (Py_ssize_t i = l->pos; i < length; i++)
-        {
-            if (ML_Lexer_read_char_n(l, i) == '{')
-            {
-                found = i;
-                break;
-            }
-        }
+        Py_ssize_t found = PyUnicode_FindChar(l->str, '{', l->pos, length, 1);
 
         if (found == -1 || found + 1 >= length)
         {

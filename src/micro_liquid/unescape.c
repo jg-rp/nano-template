@@ -191,7 +191,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
         }
 
         Py_UCS4 slash = PyUnicode_ReadChar(str, *pos);
-        Py_UCS4 u = PyUnicode_ReadChar(str, *pos);
+        Py_UCS4 u = PyUnicode_ReadChar(str, *pos + 1);
 
         if (slash != '\\' || u != 'u')
         {

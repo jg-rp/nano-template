@@ -37,6 +37,7 @@ else:
 
     # if debug_build:
     #     extra_link_args = [
+    #         "-static-libasan",
     #         "-fsanitize=address",
     #     ]
 

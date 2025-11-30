@@ -113,7 +113,7 @@ static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
 {
     if (!node->head)
     {
-        return 0; // XXX: ignoring internal error
+        return 0;
     }
 
     // We assume a single page. A for tag can have 1 or 2 children.
@@ -121,7 +121,7 @@ static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
 
     if (child_count < 1)
     {
-        return 0; // XXX: ignoring internal error
+        return 0;
     }
 
     PyObject *key = node->str;
@@ -224,7 +224,7 @@ static int render_text(NT_Node *node, NT_Context *ctx, PyObject *buf)
 
     if (!node->str)
     {
-        return 0; // XXX: silently ignoreing internal error
+        return 0;
     }
 
     return StringBuffer_append(buf, node->str);
@@ -283,7 +283,6 @@ static int iter(PyObject *op, PyObject **out_iter)
     PyObject *it = NULL;
     *out_iter = NULL;
 
-    // TODO: avoid intermediate list of items.
     PyObject *items = PyMapping_Items(op);
 
     if (items)

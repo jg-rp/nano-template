@@ -15,7 +15,6 @@ typedef struct NT_Parser
 {
     NT_Mem *mem;
     PyObject *str;
-    Py_ssize_t length; // XXX: why do we need this?
     NT_Token *tokens;
     Py_ssize_t token_count;
     Py_ssize_t pos;

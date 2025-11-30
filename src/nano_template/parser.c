@@ -25,7 +25,7 @@ static NT_Expr *NT_Parser_make_expr(NT_Parser *p, NT_ExprKind kind,
                                     NT_Token *token);
 
 /// @brief Add object `obj` to expression `expr`.
-/// @return 0 oon success, -1 on failure.
+/// @return 0 on success, -1 on failure.
 static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj);
 
 /// Return the precedence for the given token kind.
@@ -135,7 +135,6 @@ NT_Parser *NT_Parser_new(NT_Mem *mem, PyObject *str, NT_Token *tokens,
 
     parser->mem = mem;
     parser->str = str;
-    parser->length = PyUnicode_GetLength(str);
     parser->tokens = tokens;
     parser->token_count = token_count;
     parser->pos = 0;
@@ -1053,17 +1052,19 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
     NT_Token *token = NT_Parser_current(self);
     NT_TokenKind kind = token->kind;
     PyObject *obj = NULL;
+    NT_Expr *expr = NULL;
+    NT_Expr *result = NULL;
 
-    NT_Token *token_ptr = NT_Token_copy(token);
-    if (!token_ptr)
+    NT_Token *token_copy = NT_Token_copy(token);
+    if (!token_copy)
     {
         return NULL;
     }
 
-    NT_Expr *expr = NT_Parser_make_expr(self, EXPR_VAR, token_ptr);
+    expr = NT_Parser_make_expr(self, EXPR_VAR, token_copy);
     if (!expr)
     {
-        PyMem_Free(token_ptr);
+        PyMem_Free(token_copy);
         return NULL;
     }
 
@@ -1073,12 +1074,13 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
         PyObject *str = NT_Token_text(token, self->str);
         if (!str)
         {
-            goto fail;
+            goto cleanup;
         }
 
         if (NT_Parser_add_obj(self, expr, str) == -1)
         {
-            goto fail;
+            Py_DECREF(str);
+            goto cleanup;
         }
         Py_DECREF(str);
     }
@@ -1096,26 +1098,24 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
             break;
         default:
             self->pos--;
-            return expr;
+            result = expr;
+            goto cleanup;
         }
 
         if (!obj)
         {
-            goto fail;
+            goto cleanup;
         }
 
         if (NT_Parser_add_obj(self, expr, obj) == -1)
         {
-            goto fail;
+            goto cleanup;
         }
-
-        Py_DECREF(obj);
     }
 
-fail:
-    // TODO:
+cleanup:
     Py_XDECREF(obj);
-    return NULL;
+    return result;
 }
 
 static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *self)

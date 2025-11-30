@@ -27,6 +27,6 @@ PyObject *StringBuffer_finish(PyObject *self)
     PyObject *result = PyUnicode_Join(empty, self);
 
     Py_DECREF(empty);
-    Py_DECREF(self); // TODO: maybe not
+    Py_DECREF(self);
     return result;
 }

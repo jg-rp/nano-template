@@ -1,7 +1,7 @@
 import pytest
 
-from micro_liquid import render
-from micro_liquid import TemplateSyntaxError
+from nano_template import render
+from nano_template import TemplateSyntaxError
 
 
 def test_loop_over_a_list() -> None:

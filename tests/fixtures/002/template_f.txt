@@ -1,0 +1,5 @@
+<div class="item">
+    <h4>{item_title}</h4>
+    <p>{item_description}</p>
+    <p>Price: {item_price} USD</p>
+</div>

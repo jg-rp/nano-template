@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from micro_liquid import TokenKind as Kind
-from micro_liquid import TokenView
-from micro_liquid import tokenize
+from nano_template import TokenKind as Kind
+from nano_template import TokenView
+from nano_template import tokenize
 
 
 @dataclass
@@ -61,7 +61,7 @@ def test_just_output() -> None:
         assert want == got
 
 
-def test_hello_liquid() -> None:
+def test_hello_you() -> None:
     text = "Hello {{ you }}!"
     tokens = tokenize(text)
 

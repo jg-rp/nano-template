@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from micro_liquid import parse
-from micro_liquid import render
-from micro_liquid import Undefined
-from micro_liquid import serialize
-from micro_liquid._native import Template as NativeTemplate
-from micro_liquid._native import render as native_render
+from nano_template import parse
+from nano_template import render
+from nano_template import Undefined
+from nano_template import serialize
+from nano_template._pure import Template as NativeTemplate
+from nano_template._pure import render as native_render
 
 # XXX: I'm assuming `render_str` does not cache parsed templates.
 # from minijinja import render_str

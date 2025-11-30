@@ -43,7 +43,7 @@ else:
 
 ext_modules = [
     Extension(
-        "micro_liquid._micro_liquid",
+        "nano_template._nano_template",
         sources=collect_sources(),
         include_dirs=["include"],
         define_macros=[("PY_SSIZE_T_CLEAN", None), ("Py_LIMITED_API", "0x03060000")],
@@ -54,7 +54,7 @@ ext_modules = [
 ]
 
 setup(
-    name="micro_liquid",
+    name="nano_template",
     version="0.1",
     packages=find_packages(where="py"),
     ext_modules=ext_modules,

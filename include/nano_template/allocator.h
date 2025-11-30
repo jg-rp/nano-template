@@ -1,0 +1,52 @@
+#ifndef NT_ALLOCATOR_H
+#define NT_ALLOCATOR_H
+
+#include "nano_template/common.h"
+
+#define DEFAULT_BLOCK_SIZE (1024 * 4)
+
+/// @brief Allocator block header.
+typedef struct NT_MemBlock
+{
+    struct NT_MemBlock *prev;
+    Py_ssize_t capacity;
+    Py_ssize_t used;
+    uintptr_t data;
+} NT_MemBlock;
+
+/// @brief Arena allocator with PyObject reference management.
+typedef struct NT_Mem
+{
+    NT_MemBlock *head;
+    PyObject **objs;
+    Py_ssize_t obj_count;
+    Py_ssize_t obj_capacity;
+} NT_Mem;
+
+/// @brief Allocate and initialize a new allocator with a single block.
+/// @return A pointer to the new allocator, or NULL on failure with an
+/// exception set.
+NT_Mem *NT_Mem_new(void);
+
+/// @brief Initialize allocator with a single empty block.
+/// @return 0 on success, -1 on failure.
+int NT_Mem_init(NT_Mem *self);
+
+/// @brief Allocate `size` bytes.
+/// @return A pointer to the start of the allocated bytes, or NULL on failure.
+void *NT_Mem_alloc(NT_Mem *self, Py_ssize_t size);
+
+/// @brief Register `obj` as a new reference.
+/// Increments `obj`s reference count.
+/// @return 0 on success, -1 on failure.
+int NT_Mem_ref(NT_Mem *self, PyObject *obj);
+
+/// @brief Steal a reference to `obj`.
+/// Does not increment `obj`s reference count.
+/// @return 0 on success, -1 on failure.
+int NT_Mem_steal_ref(NT_Mem *self, PyObject *obj);
+
+/// @brief Free all allocated blocks and decrement any owned PyObjects.
+void NT_Mem_free(NT_Mem *self);
+
+#endif

@@ -30,13 +30,13 @@ build_debug:
 
 # Run Valgrind on the debug build
 valgrind: build_debug
-	@echo "==> Running Valgrind on _micro_liquid extension..."
+	@echo "==> Running Valgrind on _nano_template extension..."
 	valgrind -s --leak-check=full --show-leak-kinds=all --track-origins=yes \
 		./.venv/bin/python dev.py
 
 # Clean build artifacts
 clean:
-	rm -rf $(BUILD_DIR) py/*.egg-info py/micro_liquid/*.so
+	rm -rf $(BUILD_DIR) py/*.egg-info py/nano_template/*.so
 
 # Full rebuild
 rebuild: clean build

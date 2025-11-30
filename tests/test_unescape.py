@@ -3,9 +3,9 @@ from typing import NamedTuple
 
 import pytest
 
-from micro_liquid import TemplateSyntaxError
-from micro_liquid import parse
-from micro_liquid import render
+from nano_template import TemplateSyntaxError
+from nano_template import parse
+from nano_template import render
 
 
 class Case(NamedTuple):

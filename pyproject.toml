@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "micro-liquid-ext"
+name = "nano-template"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = []
@@ -17,7 +17,7 @@ dev = [
 ]
 
 [tool.setuptools.package-data]
-"micro_liquid" = ["**/*.pyi", "py.typed"]
+"nano_template" = ["**/*.pyi", "py.typed"]
 
 [tool.pyrefly]
 project-includes = [

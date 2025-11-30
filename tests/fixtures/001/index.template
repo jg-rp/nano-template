@@ -127,7 +127,7 @@ Wounu 11 moves slowly. Awejkaf 12 runs slowly. Hwltrixeg 10 moves awkwardly. Azf
 
         <footer>
             <p>&copy; {{ "now" }} {{ site_name }}</p>
-            <p>{{ site_description or "A randomly generated Liquid-based website." }}</p>
+            <p>{{ site_description or "A randomly generated website." }}</p>
         </footer>
     </body>
     </html>

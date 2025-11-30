@@ -1,8 +1,8 @@
 import pytest
 
-from micro_liquid import StrictUndefined
-from micro_liquid import UndefinedVariableError
-from micro_liquid import render
+from nano_template import StrictUndefined
+from nano_template import UndefinedVariableError
+from nano_template import render
 
 
 def test_output_strict_undefined() -> None:

@@ -3,7 +3,7 @@ from typing import TypedDict
 
 import pytest
 
-from micro_liquid import render
+from nano_template import render
 
 
 class Case(TypedDict):

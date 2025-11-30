@@ -2,8 +2,8 @@ from typing import Any
 
 import pytest
 
-from micro_liquid import render
-from micro_liquid import TemplateSyntaxError
+from nano_template import render
+from nano_template import TemplateSyntaxError
 
 
 def test_else() -> None:

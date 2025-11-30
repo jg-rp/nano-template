@@ -5,7 +5,7 @@ from dataclasses import is_dataclass
 
 import pytest
 
-from micro_liquid import render
+from nano_template import render
 
 
 @dataclass

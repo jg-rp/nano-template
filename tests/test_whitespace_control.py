@@ -1,4 +1,4 @@
-from micro_liquid import render
+from nano_template import render
 
 
 def test_whitespace_control() -> None:

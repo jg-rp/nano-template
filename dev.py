@@ -1,33 +1,25 @@
 import json
-from micro_liquid import tokenize
-from micro_liquid import render
+from nano_template import render
 
 
-# with open("tests/fixtures/001/index.template") as fd:
-#     source = fd.read()
+with open("tests/fixtures/002/template.txt") as fd:
+    source = fd.read()
 
-source = "{{ a['\\uD834\\uDD1E'] }}"
+with open("tests/fixtures/002/template_f.txt") as fd:
+    source_f = fd.read()
 
-# with open("tests/fixtures/001/data.json") as fd:
-#     data = json.load(fd)
-
-
-data = {"a": {"𝄞": "hi"}}
-
-
-for token in tokenize(source):
-    print(token)
+with open("tests/fixtures/002/data.json") as fd:
+    data = json.load(fd)
 
 print(render(source, data))
+
+print(source_f.format(**data))
 
 
 # print(render(source, data))
 
-
-# TODO: rename project to micro-t or micro_t or nano-t
-# TODO: use int instead of Py_ssize_t for return codes
-# TODO: be consistent with integer return codes. -1 and 0
-
+# TODO: rename TokenView to _TokenView
+# TODO: rename tokenize to _tokenize
 
 # TODO: compare valgrind output before and after arena
 

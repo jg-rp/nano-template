@@ -7,7 +7,6 @@ from setuptools import find_packages
 
 def collect_sources(base_dir: str = "src") -> list[str]:
     base = Path(base_dir)
-    # Recursively find all .c files
     return [str(p) for p in base.rglob("*.c")]
 
 
@@ -47,7 +46,10 @@ ext_modules = [
         "nano_template._nano_template",
         sources=collect_sources(),
         include_dirs=["include"],
-        define_macros=[("PY_SSIZE_T_CLEAN", None), ("Py_LIMITED_API", "0x03060000")],
+        define_macros=[
+            ("PY_SSIZE_T_CLEAN", None),
+            ("Py_LIMITED_API", "0x03090000"),  # 3.9
+        ],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         py_limited_api=True,
@@ -60,4 +62,5 @@ setup(
     packages=find_packages(where="py"),
     ext_modules=ext_modules,
     package_dir={"": "py"},
+    options={"bdist_wheel": {"py_limited_api": "cp39"}},
 )

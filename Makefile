@@ -1,4 +1,5 @@
 BUILD_DIR := build
+DIST_DIR := dist
 
 PYTHON := uv run python
 CLANG_TIDY := clang-tidy
@@ -36,7 +37,7 @@ valgrind: build_debug
 
 # Clean build artifacts
 clean:
-	rm -rf $(BUILD_DIR) py/*.egg-info py/nano_template/*.so
+	rm -rf $(BUILD_DIR) py/*.egg-info py/nano_template/*.so ${DIST_DIR}/*
 
 # Full rebuild
 rebuild: clean build

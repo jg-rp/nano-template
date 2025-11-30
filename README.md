@@ -39,3 +39,16 @@ parse and render minijinja    : best = 0.070754s | avg = 0.071700s
 just render ext               : best = 0.006169s | avg = 0.006182s
 just render native            : best = 0.030539s | avg = 0.030618s
 ```
+
+## ABI 3 Audit
+
+Note that abi3audit ignores target ABI version when auditing .so files.
+
+- Build a wheel locally with `python setup.py bdist_wheel`
+- Run `abi3audit dist/<NAME>.whl --verbose`
+
+Example successful output:
+
+```
+[17:55:59] 💁 nano_template-0.1.0-cp39-abi3-linux_x86_64.whl: 1 extensions scanned; 0 ABI version mismatches and 0 ABI violations found
+```

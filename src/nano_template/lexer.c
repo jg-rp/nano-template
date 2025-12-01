@@ -90,7 +90,7 @@ NT_Lexer *NT_Lexer_new(PyObject *str)
     return lexer;
 }
 
-void NT_Lexer_dealloc(NT_Lexer *l)
+void NT_Lexer_free(NT_Lexer *l)
 {
     Py_DECREF(l->str);
     PyMem_Free(l->state);

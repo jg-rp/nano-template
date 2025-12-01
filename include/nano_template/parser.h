@@ -24,7 +24,7 @@ typedef struct NT_Parser
 NT_Parser *NT_Parser_new(NT_Mem *mem, PyObject *str, NT_Token *tokens,
                          Py_ssize_t token_count);
 
-void NT_Parser_dealloc(NT_Parser *p);
+void NT_Parser_free(NT_Parser *p);
 
 NT_Node *NT_Parser_parse_root(NT_Parser *p);
 

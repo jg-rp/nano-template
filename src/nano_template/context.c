@@ -25,7 +25,7 @@ NT_Context *NT_Context_new(PyObject *str, PyObject *globals,
     return ctx;
 }
 
-void NT_Context_dealloc(NT_Context *self)
+void NT_Context_free(NT_Context *self)
 {
     Py_XDECREF(self->str);
 

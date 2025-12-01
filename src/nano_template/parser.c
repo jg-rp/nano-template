@@ -247,7 +247,7 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj)
     return 0;
 }
 
-void NT_Parser_dealloc(NT_Parser *p)
+void NT_Parser_free(NT_Parser *p)
 {
     if (p->tokens)
     {

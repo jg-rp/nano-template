@@ -53,8 +53,8 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
     }
 
     root = NULL;
-    NT_Lexer_dealloc(lexer);
-    NT_Parser_dealloc(parser);
+    NT_Lexer_free(lexer);
+    NT_Parser_free(parser);
     return template;
 
 fail:
@@ -66,13 +66,13 @@ fail:
 
     if (lexer)
     {
-        NT_Lexer_dealloc(lexer);
+        NT_Lexer_free(lexer);
         lexer = NULL;
     }
 
     if (parser)
     {
-        NT_Parser_dealloc(parser);
+        NT_Parser_free(parser);
         parser = NULL;
     }
 

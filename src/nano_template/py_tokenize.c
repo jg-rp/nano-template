@@ -16,7 +16,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     NT_Token *tokens = NT_Lexer_scan(lexer, &token_count);
     if (!tokens)
     {
-        NT_Lexer_dealloc(lexer);
+        NT_Lexer_free(lexer);
         return NULL;
     }
 
@@ -45,7 +45,7 @@ PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
     }
 
     PyMem_Free(tokens);
-    NT_Lexer_dealloc(lexer);
+    NT_Lexer_free(lexer);
     return list;
 
 fail:
@@ -54,7 +54,7 @@ fail:
         PyMem_Free(tokens);
         tokens = NULL;
     }
-    NT_Lexer_dealloc(lexer);
+    NT_Lexer_free(lexer);
     Py_XDECREF(list);
     return NULL;
 }

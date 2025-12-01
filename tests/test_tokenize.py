@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from nano_template import TokenKind as Kind
-from nano_template import TokenView
-from nano_template import tokenize
+from nano_template import _TokenKind as Kind
+from nano_template import _TokenView
+from nano_template import _tokenize
 
 
 @dataclass
@@ -12,7 +12,7 @@ class _T:
 
     def __eq__(self, value: object) -> bool:
         return (
-            isinstance(value, TokenView)
+            isinstance(value, _TokenView)
             and value.kind == self.kind
             and value.text == self.text
         )
@@ -20,7 +20,7 @@ class _T:
 
 def test_just_other() -> None:
     text = "hello"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "hello"),
@@ -34,7 +34,7 @@ def test_just_other() -> None:
 
 def test_empty() -> None:
     text = ""
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_EOF, ""),
@@ -47,7 +47,7 @@ def test_empty() -> None:
 
 def test_just_output() -> None:
     text = "{{ x }}"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OUT_START, "{{"),
@@ -63,7 +63,7 @@ def test_just_output() -> None:
 
 def test_hello_you() -> None:
     text = "Hello {{ you }}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -81,7 +81,7 @@ def test_hello_you() -> None:
 
 def test_if() -> None:
     text = "Hello {% if true %}{{ you }}{% endif %}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -106,7 +106,7 @@ def test_if() -> None:
 
 def test_if_else() -> None:
     text = "Hello {% if true %}{{ you }}{% else %} guest {% endif %}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -135,7 +135,7 @@ def test_if_else() -> None:
 
 def test_elif() -> None:
     text = "Hello {% if true %}{{ you }}{% elif false %} guest {% endif %}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -165,7 +165,7 @@ def test_elif() -> None:
 
 def test_for() -> None:
     text = "Hello {% for x in y %}{{ you }}{% endfor %}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -192,7 +192,7 @@ def test_for() -> None:
 
 def test_whitespace_control() -> None:
     text = "Hello {%- if true ~%}{{~ you -}}{% endif %}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -221,7 +221,7 @@ def test_whitespace_control() -> None:
 
 def test_single_quoted_string_literal() -> None:
     text = "Hello {{ 'you' }}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -239,7 +239,7 @@ def test_single_quoted_string_literal() -> None:
 
 def test_double_quoted_string_literal() -> None:
     text = 'Hello {{ "you" }}!'
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -257,7 +257,7 @@ def test_double_quoted_string_literal() -> None:
 
 def test_single_quoted_string_literal_with_escapes() -> None:
     text = r"Hello {{ 'yo\\u' }}!"
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),
@@ -275,7 +275,7 @@ def test_single_quoted_string_literal_with_escapes() -> None:
 
 def test_double_quoted_string_literal_with_escapes() -> None:
     text = r'Hello {{ "yo\\u" }}!'
-    tokens = tokenize(text)
+    tokens = _tokenize(text)
 
     expect: list[_T] = [
         _T(Kind.TOK_OTHER, "Hello "),

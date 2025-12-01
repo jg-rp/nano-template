@@ -25,7 +25,7 @@ typedef struct NT_Lexer
 } NT_Lexer;
 
 NT_Lexer *NT_Lexer_new(PyObject *str);
-void NT_Lexer_dealloc(NT_Lexer *l);
+void NT_Lexer_free(NT_Lexer *l);
 
 /// @brief Scan the next token.
 /// @return The next token, or NULL on error with an exception set.

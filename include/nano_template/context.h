@@ -6,7 +6,7 @@
 
 /// @brief Internal render context.
 /// Reference counts for all PyObject* will be incremented by NT_Context_new;
-/// NT_Context_dealloc decrements.
+/// NT_Context_free decrements.
 typedef struct NT_Context
 {
     PyObject *str;
@@ -24,7 +24,7 @@ typedef struct NT_Context
 NT_Context *NT_Context_new(PyObject *str, PyObject *globals,
                            PyObject *serializer, PyObject *undefined);
 
-void NT_Context_dealloc(NT_Context *self);
+void NT_Context_free(NT_Context *self);
 
 /// @brief Lookup `key` in the current scope.
 /// @return 0 if out was set to a new reference, or 1 if `key` is not in scope
@@ -32,7 +32,7 @@ void NT_Context_dealloc(NT_Context *self);
 int NT_Context_get(NT_Context *self, PyObject *key, PyObject **out);
 
 /// @brief Extend scope with mapping `namespace`.
-/// A reference to `namespace` is stolen and DECREFed in `NT_Context_dealloc`.
+/// A reference to `namespace` is stolen and DECREFed in `NT_Context_free`.
 /// @return 0 on success, -1 on failure.
 int NT_Context_push(NT_Context *self, PyObject *namespace);
 

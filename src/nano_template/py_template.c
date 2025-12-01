@@ -4,7 +4,7 @@
 
 static PyTypeObject *Template_TypeObject = NULL;
 
-void NTPY_Template_dealloc(PyObject *self)
+void NTPY_Template_free(PyObject *self)
 {
     NTPY_Template *op = (NTPY_Template *)self;
     NT_Mem_free(op->ast);
@@ -94,13 +94,13 @@ static PyObject *NTPY_Template_render(PyObject *self, PyObject *args)
         goto fail;
     }
 
-    NT_Context_dealloc(ctx);
+    NT_Context_free(ctx);
     return rv;
 
 fail:
     if (ctx)
     {
-        NT_Context_dealloc(ctx);
+        NT_Context_free(ctx);
     }
     Py_XDECREF(buf);
     Py_XDECREF(rv);
@@ -114,7 +114,7 @@ static PyMethodDef Template_methods[] = {{"render",
 
 static PyType_Slot Template_slots[] = {
     {Py_tp_doc, "Compiled template"},
-    {Py_tp_dealloc, (void *)NTPY_Template_dealloc},
+    {Py_tp_free, (void *)NTPY_Template_free},
     {Py_tp_methods, Template_methods},
     {0, NULL}};
 

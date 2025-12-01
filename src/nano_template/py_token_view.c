@@ -58,7 +58,7 @@ static PyObject *TokenView_end(PyObject *self, void *Py_UNUSED(closure))
     return PyLong_FromSsize_t(op->end);
 }
 
-static void TokenView_dealloc(PyObject *self)
+static void TokenView_free(PyObject *self)
 {
     NTPY_TokenViewObject *op = (NTPY_TokenViewObject *)self;
     Py_XDECREF(op->source);
@@ -88,7 +88,7 @@ static PyGetSetDef TokenView_getset[] = {
 
 static PyType_Slot TokenView_slots[] = {
     {Py_tp_doc, "Lightweight token view into source text"},
-    {Py_tp_dealloc, (void *)TokenView_dealloc},
+    {Py_tp_free, (void *)TokenView_free},
     {Py_tp_repr, (void *)TokenView_repr},
     {Py_tp_getset, (void *)TokenView_getset},
     {0, NULL}};

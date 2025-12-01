@@ -17,7 +17,7 @@ typedef struct NTPY_Template
 
 PyObject *NTPY_Template_new(PyObject *str, NT_Node *root, NT_Mem *ast);
 
-void NTPY_Template_dealloc(PyObject *self);
+void NTPY_Template_free(PyObject *self);
 
 int nt_register_template_type(PyObject *module);
 

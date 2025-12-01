@@ -11,7 +11,7 @@ PyObject *StringBuffer_new(void);
 /// @return 0 on success, -1 on failure with an exception set.
 int StringBuffer_append(PyObject *self, PyObject *str);
 
-/// @brief Join buffer items into a single string an destroy the buffer.
+/// @brief Join buffer items into a single string and destroy the buffer.
 /// Do not Py_DECREF the buffer after calling this.
 /// @return The concatenated string, or NULL on failure.
 PyObject *StringBuffer_finish(PyObject *self);

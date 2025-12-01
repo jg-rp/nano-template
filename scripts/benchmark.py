@@ -14,6 +14,7 @@ from nano_template._pure import Template as NativeTemplate
 from nano_template._pure import render as native_render
 
 # XXX: I'm assuming `render_str` does not cache parsed templates.
+# TODO: Force parse by generating lots of distinct strings.
 # from minijinja import render_str
 
 

@@ -1,8 +1,5 @@
 import json
 from nano_template import render
-from nano_template import parse
-
-parse("{{ a['\\\"'] }}")
 
 
 with open("tests/fixtures/002/template.txt") as fd:
@@ -21,9 +18,11 @@ print(source_f.format(**data))
 
 # print(render(source, data))
 
-# TODO: rename TokenView to _TokenView
-# TODO: rename tokenize to _tokenize
-# TODO: rename dealloc to free
+# TODO: setup ruff
+# TODO: replace uv with hatch?
+# TODO: accept `serializer` and `undefined` when calling `parse` and store in `Template` instance
+# TODO:   - make Template.render() arguments optional
+# TODO:   - benchmark _Template subclass?
 
 # TODO: compare valgrind output before and after arena
 

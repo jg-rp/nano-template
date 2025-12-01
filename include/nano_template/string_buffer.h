@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_STRING_BUFFER_H
 #define NT_STRING_BUFFER_H
 

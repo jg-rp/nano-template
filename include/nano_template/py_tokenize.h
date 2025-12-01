@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NTPY_TOKENIZE_H
 #define NTPY_TOKENIZE_H
 

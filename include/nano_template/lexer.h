@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_Lexer_H
 #define NT_Lexer_H
 

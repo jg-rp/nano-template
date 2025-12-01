@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NTPY_TOKEN_VIEW_H
 #define NTPY_TOKEN_VIEW_H
 
-#include <Python.h>
+#include "nano_template/common.h"
 
 /// @brief A convenient Python type exposing tokens for testing.
 typedef struct

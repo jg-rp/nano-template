@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/node.h"
 #include "nano_template/string_buffer.h"
 
@@ -47,6 +49,8 @@ static int render_output(NT_Node *node, NT_Context *ctx, PyObject *buf)
 {
     PyObject *str = NULL;
     PyObject *op = NT_Expression_evaluate(node->expr, ctx);
+
+    // TODO: or op is undefined
 
     if (!op)
     {

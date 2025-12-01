@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NTPY_PARSE_H
 #define NTPY_PARSE_H
 

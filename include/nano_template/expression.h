@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_EXPRESSION_H
 #define NT_EXPRESSION_H
 

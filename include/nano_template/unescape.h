@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_UNESCAPE_H
 #define NT_UNESCAPE_H
 

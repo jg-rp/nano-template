@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/string_buffer.h"
 
 PyObject *StringBuffer_new()

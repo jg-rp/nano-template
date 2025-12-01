@@ -15,8 +15,8 @@ debug_build = "--debug" in sys.argv
 if debug_build:
     sys.argv.remove("--debug")
 
-extra_compile_args = []
-extra_link_args = []
+extra_compile_args: list[str] = []
+extra_link_args: list[str] = []
 
 if sys.platform == "win32":
     extra_compile_args = ["/O2", "/W3"]

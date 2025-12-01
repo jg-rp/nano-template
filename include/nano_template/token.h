@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_SPAN_H
 #define NT_SPAN_H
 

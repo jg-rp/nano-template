@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/lexer.h"
 
 /// @brief Push a new state onto the state stack.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/allocator.h"
 
 /// @brief Allocate and initialize a new block of memory.

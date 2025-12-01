@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/unescape.h"
 #include "nano_template/error.h"
 #include "nano_template/string_buffer.h"

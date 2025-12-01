@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_ERROR_H
 #define NT_ERROR_H
 
-#include <stdarg.h>
 #include "nano_template/common.h"
 #include "nano_template/token.h"
+#include <stdarg.h>
 
 // TODO: rename with prefix
 static void *parser_error(NT_Token *token, const char *fmt, ...)

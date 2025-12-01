@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/py_token_view.h"
 #include "nano_template/token.h"
 

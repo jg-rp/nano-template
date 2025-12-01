@@ -1,0 +1,11 @@
+recursive-include include *.h
+recursive-include src *.c *.h
+recursive-include py *.pyi
+recursive-include tests *.py *.txt *.data
+
+include pyproject.toml
+include setup.py
+include README*
+include LICENSE*
+
+prune **/__pycache__

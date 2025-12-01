@@ -1,20 +1,35 @@
-## lldb
+# Nano Templates
 
-```
-command source .lldbinit
+Minimal, fast, non-evaluating text templates for Python.
+
+## Install
+
+TODO
+
+## Example
+
+```python
+import nano_template as nt
+
+template = nt.parse("Hello, {{ you }}!")
+print(template.render({"you": "World"}))  # Hello, World!
 ```
 
-## ASan
+## Syntax
 
-```
-# Linux
-export LD_PRELOAD=$(gcc -print-file-name=libasan.so)
-export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
+TODO:
 
-# macOS
-export DYLD_INSERT_LIBRARIES=$(clang -print-file-name=libclang_rt.asan_osx_dynamic.dylib)
-export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
-```
+## API
+
+TODO
+
+### Serializing objects
+
+TODO
+
+### Undefined variables
+
+TODO
 
 ## Preliminary benchmark
 
@@ -35,7 +50,11 @@ render template               : best = 0.413830s | avg = 0.419547s
 format string                 : best = 0.375050s | avg = 0.375237s
 ```
 
-## ABI 3 Audit
+## Contributing
+
+TODO: move this
+
+### ABI 3 Audit
 
 Note that abi3audit ignores target ABI version when auditing .so files.
 
@@ -47,3 +66,7 @@ Example successful output:
 ```
 [17:55:59] 💁 nano_template-0.1.0-cp39-abi3-linux_x86_64.whl: 1 extensions scanned; 0 ABI version mismatches and 0 ABI violations found
 ```
+
+## License
+
+`nano-template` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

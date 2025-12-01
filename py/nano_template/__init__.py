@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 import json
 from collections.abc import Mapping
 from typing import Any

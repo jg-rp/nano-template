@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_PARSER_H
 #define NT_PARSER_H
 

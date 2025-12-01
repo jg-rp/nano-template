@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "nano_template/context.h"
 
 NT_Context *NT_Context_new(PyObject *str, PyObject *globals,

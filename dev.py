@@ -1,24 +1,14 @@
-import json
-from nano_template import render
 from nano_template import StrictUndefined
+from nano_template import parse
+from nano_template import render
 
-
-# with open("tests/fixtures/001/template.txt") as fd:
-#     source = fd.read()
-
-source = "Hello {{fooo}}!"
-
-with open("tests/fixtures/001/data.json") as fd:
-    data = json.load(fd)
-
-print(render(source, data, undefined=StrictUndefined))
-
+t = parse("{{ foo.nosuchthing }}", undefined=StrictUndefined)
+print(t.render({"foo": {}}))
 
 # print(render(source, data))
 
-# TODO: don't use `self`
+# TODO: don't use `self` unless object
 # TODO: setup ruff
-# TODO: replace uv with hatch?
 
 # TODO: compare valgrind output before and after arena
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_ALLOCATOR_H
 #define NT_ALLOCATOR_H
 

@@ -10,6 +10,11 @@ def test_output_strict_undefined() -> None:
         render("{{ nosuchthing }}", data={}, undefined=StrictUndefined)
 
 
+def test_output_nested_strict_undefined() -> None:
+    with pytest.raises(UndefinedVariableError):
+        render("{{ foo.nosuchthing }}", data={"foo": {}}, undefined=StrictUndefined)
+
+
 def test_strict_undefined_truthiness() -> None:
     result = render(
         "{% if nosuchthing %}true{% else %}false{% endif %}",

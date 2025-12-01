@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0"]
+requires = ["setuptools>=68.0", "types-setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,16 +17,9 @@ dev = [
     "pytest>=9.0.0",
     "setuptools>=80.9.0",
     "twine>=6.2.0",
+    "types-setuptools>=80.9.0.20250822",
 ]
 
-[tool.setuptools.package-data]
-"nano_template" = ["**/*.pyi", "py.typed"]
-
-[tool.pyrefly]
-project-includes = [
-    "**/*.py*",
-    "**/*.ipynb",
-]
 
 [tool.mypy]
 disallow_incomplete_defs = true

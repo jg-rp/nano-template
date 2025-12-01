@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef NT_NODE_H
 #define NT_NODE_H
 

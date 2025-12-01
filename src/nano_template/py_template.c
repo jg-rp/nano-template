@@ -9,10 +9,13 @@ void NTPY_Template_free(PyObject *self)
     NTPY_Template *op = (NTPY_Template *)self;
     NT_Mem_free(op->ast);
     Py_XDECREF(op->str);
+    Py_XDECREF(op->serializer);
+    Py_XDECREF(op->undefined);
     PyObject_Free(op);
 }
 
-PyObject *NTPY_Template_new(PyObject *str, NT_Node *root, NT_Mem *ast)
+PyObject *NTPY_Template_new(PyObject *str, NT_Node *root, NT_Mem *ast,
+                            PyObject *serializer, PyObject *undefined)
 {
 
     if (!Template_TypeObject)
@@ -30,37 +33,29 @@ PyObject *NTPY_Template_new(PyObject *str, NT_Node *root, NT_Mem *ast)
     NTPY_Template *op = (NTPY_Template *)obj;
 
     Py_INCREF(str);
+    Py_INCREF(serializer);
+    Py_INCREF(undefined);
+
     op->str = str;
     op->root = root;
     op->ast = ast;
+    op->serializer = serializer;
+    op->undefined = undefined;
     return obj;
 }
 
-// TODO: __str__
-
-/// @brief Render a compiled template into a string.
-/// @return Python `str` containing the rendered template on success, or `NULL`
-///     on error with a Python exception set.
-static PyObject *NTPY_Template_render(PyObject *self, PyObject *args)
+/// @brief Render template with data from `globals`.
+/// @param globals A mapping of strings to Python objects.
+/// @return The rendered string on success, or `NULL` on error with a Python
+/// exception set.
+static PyObject *NTPY_Template_render(PyObject *self, PyObject *globals)
 {
     NTPY_Template *op = (NTPY_Template *)self;
-    PyObject *globals = NULL;
-    PyObject *serializer = NULL;
-    PyObject *undefined = NULL;
     NT_Context *ctx = NULL;
     PyObject *buf = NULL;
     PyObject *rv = NULL;
 
-    // TODO: or kwargs, remember METH_KEYWORDS bit flag
-
-    if (!PyArg_ParseTuple(args, "OOO", &globals, &serializer, &undefined))
-    {
-        return NULL;
-    }
-
-    // TODO: validate arguments
-
-    ctx = NT_Context_new(op->str, globals, serializer, undefined);
+    ctx = NT_Context_new(op->str, globals, op->serializer, op->undefined);
     if (!ctx)
     {
         goto fail;
@@ -107,10 +102,9 @@ fail:
     return NULL;
 }
 
-static PyMethodDef Template_methods[] = {{"render",
-                                          (PyCFunction)NTPY_Template_render,
-                                          METH_VARARGS, "Render the template"},
-                                         {NULL, NULL, 0, NULL}};
+static PyMethodDef Template_methods[] = {
+    {"render", NTPY_Template_render, METH_O, "Render the template"},
+    {NULL, NULL, 0, NULL}};
 
 static PyType_Slot Template_slots[] = {
     {Py_tp_doc, "Compiled template"},

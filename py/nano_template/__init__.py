@@ -16,18 +16,18 @@ from ._exceptions import TemplateSyntaxError
 from ._exceptions import UndefinedVariableError
 
 __all__ = (
+    "_tokenize",
+    "_TokenKind",
+    "_TokenView",
+    "parse",
+    "render",
+    "serialize",
     "StrictUndefined",
     "Template",
     "TemplateError",
     "TemplateSyntaxError",
-    "_TokenKind",
-    "_TokenView",
     "Undefined",
     "UndefinedVariableError",
-    "parse",
-    "render",
-    "serialize",
-    "_tokenize",
 )
 
 
@@ -35,10 +35,15 @@ def serialize(obj: object) -> str:
     return json.dumps(obj) if isinstance(obj, (list, dict, tuple)) else str(obj)
 
 
-def parse(source: str) -> Template:
+def parse(
+    source: str,
+    *,
+    serializer: Callable[[object], str] = serialize,
+    undefined: Type[Undefined] = Undefined,
+) -> Template:
     """Parse `source` as a template."""
     try:
-        return _parse(source)
+        return _parse(source, serializer, undefined)
     except RuntimeError as err:
         raise TemplateSyntaxError(
             str(err),
@@ -56,12 +61,4 @@ def render(
     undefined: Type[Undefined] = Undefined,
 ) -> str:
     """Render template `source` with variables from `data`."""
-    try:
-        return _parse(source).render(data, serializer, undefined)
-    except RuntimeError as err:
-        raise TemplateSyntaxError(
-            str(err),
-            source=source,
-            start_index=getattr(err, "start_index", -1),
-            stop_index=getattr(err, "stop_index", -1),
-        ) from None
+    return parse(source, serializer=serializer, undefined=undefined).render(data)

@@ -4,7 +4,7 @@
 #include "nano_template/parser.h"
 #include "nano_template/py_template.h"
 
-PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
+PyObject *parse(PyObject *Py_UNUSED(self), PyObject *args)
 {
     NT_Lexer *lexer = NULL;
     NT_Mem *ast = NULL;
@@ -13,6 +13,17 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
     NT_Token *tokens = NULL;
     Py_ssize_t token_count = 0;
     PyObject *template = NULL;
+
+    PyObject *src;
+    PyObject *serializer;
+    PyObject *undefined;
+
+    if (!PyArg_ParseTuple(args, "OOO", &src, &serializer, &undefined))
+    {
+        return NULL;
+    }
+
+    // TODO: validate arguments
 
     lexer = NT_Lexer_new(src);
     if (!lexer)
@@ -46,7 +57,7 @@ PyObject *parse(PyObject *Py_UNUSED(self), PyObject *src)
         goto fail;
     }
 
-    template = NTPY_Template_new(src, root, ast);
+    template = NTPY_Template_new(src, root, ast, serializer, undefined);
     if (!template)
     {
         goto fail;

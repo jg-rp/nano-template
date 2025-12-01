@@ -5,7 +5,8 @@
 #include <Python.h>
 
 static PyMethodDef nano_template_methods[] = {
-    {"parse", parse, METH_O, PyDoc_STR("parse(str) -> Template")},
+    {"parse", (PyCFunction)parse, METH_VARARGS,
+     PyDoc_STR("parse(str) -> Template")},
     {"tokenize", tokenize, METH_O,
      PyDoc_STR("tokenize(str) -> list[TokenView]")},
     {NULL, NULL, 0, NULL}};

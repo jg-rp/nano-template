@@ -5,7 +5,6 @@
 #include "nano_template/token.h"
 
 /// @brief Internal render context.
-/// Reference counts for all PyObject* will be incremented by NT_Context_new;
 /// NT_Context_free decrements.
 typedef struct NT_Context
 {
@@ -20,6 +19,8 @@ typedef struct NT_Context
 } NT_Context;
 
 /// @brief Allocate and initialize a new NT_Context.
+/// Increment reference counts for `str`, `globals`, `serializer` and
+/// `undefined`. All are DECREFed in NT_Context_free.
 /// @return Newly allocated NT_Context*, or NULL on memory error.
 NT_Context *NT_Context_new(PyObject *str, PyObject *globals,
                            PyObject *serializer, PyObject *undefined);

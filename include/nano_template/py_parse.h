@@ -3,10 +3,9 @@
 
 #include "nano_template/common.h"
 
-/// @brief Parse template `src`.
-/// @param src A Python string.
+/// @brief Parse argument string as a template.
 /// @return A new reference to a NTPY_Template, or NULL on error with an
 /// exception set.
-PyObject *parse(PyObject *self, PyObject *src);
+PyObject *parse(PyObject *self, PyObject *args);
 
 #endif

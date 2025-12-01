@@ -28,7 +28,7 @@ class Fixture:
 
     @staticmethod
     def load(path: Path) -> Fixture:
-        source = (path / "index.template").read_text()
+        source = (path / "template.txt").read_text()
 
         with (path / "data.json").open() as fd:
             data = json.load(fd)

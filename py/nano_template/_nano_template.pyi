@@ -19,11 +19,10 @@ class TokenView:
 def tokenize(source: str) -> list[TokenView]: ...
 
 class Template:
-    def render(
-        self,
-        data: Mapping[str, object],
-        serializer: Callable[[object], str],
-        undefined: Type[Undefined],
-    ) -> str: ...
+    def render(self, data: Mapping[str, object]) -> str: ...
 
-def parse(source: str) -> Template: ...
+def parse(
+    source: str,
+    serializer: Callable[[object], str],
+    undefined: Type[Undefined],
+) -> Template: ...

@@ -14,22 +14,27 @@ from ._exceptions import TemplateSyntaxError
 from ._exceptions import UndefinedVariableError
 
 __all__ = (
+    "_tokenize",
+    "_TokenKind",
+    "_TokenView",
+    "parse",
+    "render",
+    "serialize",
     "StrictUndefined",
     "Template",
     "TemplateError",
     "TemplateSyntaxError",
-    "_TokenKind",
-    "_TokenView",
     "Undefined",
     "UndefinedVariableError",
-    "parse",
-    "render",
-    "serialize",
-    "_tokenize",
 )
 
 def serialize(obj: object) -> str: ...
-def parse(source: str) -> Template: ...
+def parse(
+    source: str,
+    *,
+    serializer: Callable[[object], str] = serialize,
+    undefined: Type[Undefined] = Undefined,
+) -> Template: ...
 def render(
     source: str,
     data: Mapping[str, Any],

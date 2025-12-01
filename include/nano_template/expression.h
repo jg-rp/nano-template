@@ -7,8 +7,6 @@
 #include "nano_template/context.h"
 #include "nano_template/token.h"
 
-#define NT_OBJ_PRE_PAGE 4
-
 /// @brief Possible expression kinds.
 typedef enum
 {
@@ -20,14 +18,6 @@ typedef enum
     EXPR_VAR
 } NT_ExprKind;
 
-/// @brief One block of a paged array holding Python objects.
-typedef struct NT_ObjPage
-{
-    struct NT_ObjPage *next;
-    Py_ssize_t count;
-    PyObject *objs[NT_OBJ_PRE_PAGE];
-} NT_ObjPage;
-
 /// @brief Internal expression type.
 typedef struct NT_Expr
 {
@@ -36,9 +26,10 @@ typedef struct NT_Expr
     struct NT_Expr *left;
     struct NT_Expr *right;
 
-    // Paged array holding Python objects, like segments in a variable path.
-    NT_ObjPage *head;
-    NT_ObjPage *tail;
+    // A string if EXPR_STR.
+    // A list of path segments if EXPR_VAR.
+    // NULL otherwise.
+    PyObject *obj;
 
     // Optional token, used by EXPR_VAR to give the `Undefined` class line and
     // column numbers.

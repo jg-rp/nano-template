@@ -26,10 +26,6 @@ static int NT_Parser_add_node(NT_Parser *p, NT_Node *parent, NT_Node *child);
 static NT_Expr *NT_Parser_make_expr(NT_Parser *p, NT_ExprKind kind,
                                     NT_Token *token);
 
-/// @brief Add object `obj` to expression `expr`.
-/// @return 0 on success, -1 on failure.
-static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj);
-
 /// Return the precedence for the given token kind.
 static inline Precedence precedence(NT_TokenKind kind);
 
@@ -206,47 +202,10 @@ static NT_Expr *NT_Parser_make_expr(NT_Parser *p, NT_ExprKind kind,
 
     expr->kind = kind;
     expr->token = token;
-    expr->head = NULL;
-    expr->tail = NULL;
+    expr->obj = NULL;
     expr->left = NULL;
     expr->right = NULL;
     return expr;
-}
-
-static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj)
-{
-    if (!expr->tail)
-    {
-        NT_ObjPage *page = NT_Mem_alloc(p->mem, sizeof(NT_ObjPage));
-        if (!page)
-        {
-            return -1;
-        }
-
-        page->next = NULL;
-        page->count = 0;
-        expr->head = page;
-        expr->tail = page;
-    }
-
-    if (expr->tail->count == NT_OBJ_PRE_PAGE)
-    {
-        NT_ObjPage *new_page = NT_Mem_alloc(p->mem, sizeof(NT_ObjPage));
-        if (!new_page)
-        {
-            return -1;
-        }
-
-        new_page->next = NULL;
-        new_page->count = 0;
-        expr->tail->next = new_page;
-        expr->tail = new_page;
-    }
-
-    NT_ObjPage *page = expr->tail;
-    page->objs[page->count++] = obj;
-    NT_Mem_ref(p->mem, obj);
-    return 0;
 }
 
 void NT_Parser_free(NT_Parser *p)
@@ -881,12 +840,8 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
             goto fail;
         }
 
-        if (NT_Parser_add_obj(self, left, str) < 0)
-        {
-            goto fail;
-        }
-
-        Py_DECREF(str);
+        left->obj = str;
+        NT_Mem_steal_ref(self->mem, str);
         str = NULL;
         self->pos++;
         break;
@@ -904,13 +859,8 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
             goto fail;
         }
 
-        if (NT_Parser_add_obj(self, left, str) < 0)
-        {
-            Py_DECREF(str);
-            goto fail;
-        }
-
-        Py_DECREF(str);
+        left->obj = str;
+        NT_Mem_steal_ref(self->mem, str);
         str = NULL;
         self->pos++;
         break;
@@ -1056,6 +1006,7 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
     PyObject *obj = NULL;
     NT_Expr *expr = NULL;
     NT_Expr *result = NULL;
+    PyObject *segments = NULL;
 
     NT_Token *token_copy = NT_Token_copy(token);
     if (!token_copy)
@@ -1070,6 +1021,15 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
         return NULL;
     }
 
+    segments = PyList_New(0);
+    if (!segments)
+    {
+        goto cleanup;
+    }
+
+    expr->obj = segments;
+    NT_Mem_steal_ref(self->mem, segments);
+
     if (kind == TOK_WORD)
     {
         self->pos++;
@@ -1079,12 +1039,14 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
             goto cleanup;
         }
 
-        if (NT_Parser_add_obj(self, expr, str) == -1)
+        if (PyList_Append(segments, str) < 0)
         {
             Py_DECREF(str);
             goto cleanup;
         }
+
         Py_DECREF(str);
+        str = NULL;
     }
 
     for (;;)
@@ -1109,10 +1071,13 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
             goto cleanup;
         }
 
-        if (NT_Parser_add_obj(self, expr, obj) == -1)
+        if (PyList_Append(segments, obj) < 0)
         {
             goto cleanup;
         }
+
+        Py_DECREF(obj);
+        obj = NULL;
     }
 
 cleanup:

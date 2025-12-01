@@ -3,8 +3,6 @@ import timeit
 from typing import Any
 
 from nano_template import parse
-from nano_template import Undefined
-from nano_template import serialize
 
 
 with open("tests/fixtures/002/template.txt") as fd:
@@ -18,21 +16,19 @@ with open("tests/fixtures/002/data.json") as fd:
 
 template = parse(source)
 
-assert template.render(data, serialize, Undefined) == source_f.format(**data)
+assert template.render(data) == source_f.format(**data)
 
 
 _TESTS = {
-    "render template": "template.render(data, serialize, Undefined)",
+    "render template": "template.render(data)",
     "format string": "source_f.format(**data)",
 }
 
 
-def benchmark(number: int = 10000, repeat: int = 5) -> None:
+def benchmark(number: int = 1000000, repeat: int = 5) -> None:
     _globals: dict[str, Any] = {
         "source_f": source_f,
         "data": data,
-        "Undefined": Undefined,
-        "serialize": serialize,
         "template": template,
     }
 

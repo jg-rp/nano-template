@@ -8,10 +8,8 @@ from typing import Any
 
 from nano_template import parse
 from nano_template import render
-from nano_template import Undefined
-from nano_template import serialize
-from nano_template._pure import Template as NativeTemplate
-from nano_template._pure import render as native_render
+from nano_template._pure import Template as PyTemplate
+from nano_template._pure import render as py_render
 
 # XXX: I'm assuming `render_str` does not cache parsed templates.
 # TODO: Force parse by generating lots of distinct strings.
@@ -38,12 +36,12 @@ class Fixture:
 
 _TESTS = {
     "parse ext": "parse(source)",
-    "parse native": "NativeTemplate(source)",
+    "parse pure": "PyTemplate(source)",
     "parse and render ext": "render(source, data)",
-    "parse and render native": "native_render(source, data)",
+    "parse and render pure": "py_render(source, data)",
     # "parse and render minijinja": "Environment().render_str(source, name=None, **data)",
-    "just render ext": "t.render(data, serialize, Undefined)",
-    "just render native": "nt.render(data)",
+    "just render ext": "t.render(data)",
+    "just render pure": "nt.render(data)",
 }
 
 
@@ -51,19 +49,17 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
     """Run the benchmark against fixture `path`. Print results to stdout."""
     fixture = Fixture.load(Path(path))
     t = parse(fixture.source)
-    nt = NativeTemplate(fixture.source)
+    nt = PyTemplate(fixture.source)
 
     _globals: dict[str, Any] = {
         "data": fixture.data,
-        "native_render": native_render,
-        "NativeTemplate": NativeTemplate,
+        "py_render": py_render,
+        "PyTemplate": PyTemplate,
         "nt": nt,
         "parse": parse,
         "render": render,
         "source": fixture.source,
         "t": t,
-        "Undefined": Undefined,
-        "serialize": serialize,
         # "render_str": render_str,
     }
 

@@ -1,13 +1,3 @@
-## Names
-
-Type names: RawRegion, ObjectRegion
-Variable/parameter names: mem, raw_mem, obj_mem
-Functions: RawRegion_alloc(), RawRegion_free(), etc.
-
-```
-PySys_WriteStdout("ch: %c\n", ch);
-```
-
 ## lldb
 
 ```
@@ -30,14 +20,19 @@ export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
 
 ```
 $ python scripts/benchmark.py
-(001) Best of 5 rounds with 1000 iterations per round.
-parse ext                     : best = 0.012726s | avg = 0.012807s
-parse native                  : best = 0.243873s | avg = 0.244109s
-parse and render ext          : best = 0.019537s | avg = 0.019592s
-parse and render native       : best = 0.278124s | avg = 0.278674s
-parse and render minijinja    : best = 0.070754s | avg = 0.071700s
-just render ext               : best = 0.006169s | avg = 0.006182s
-just render native            : best = 0.030539s | avg = 0.030618s
+(001) Best of 5 rounds with 10000 iterations per round.
+parse ext                     : best = 0.092188s | avg = 0.092236s
+parse pure                    : best = 2.408759s | avg = 2.416534s
+parse and render ext          : best = 0.159726s | avg = 0.159882s
+parse and render pure         : best = 2.816334s | avg = 2.822223s
+just render ext               : best = 0.062731s | avg = 0.062923s
+just render pure              : best = 0.308758s | avg = 0.309301s
+```
+
+```
+(002) Best of 5 rounds with 1000000 iterations per round.
+render template               : best = 0.413830s | avg = 0.419547s
+format string                 : best = 0.375050s | avg = 0.375237s
 ```
 
 ## ABI 3 Audit

@@ -7,9 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// TODO: remove PY_ prefix
-
-#define PY_TODO()                                                             \
+#define NTPY_TODO()                                                           \
     do                                                                        \
     {                                                                         \
         PyErr_Format(PyExc_NotImplementedError,                               \
@@ -17,7 +15,7 @@
         return NULL;                                                          \
     } while (0)
 
-#define PY_TODO_I()                                                           \
+#define NTPY_TODO_I()                                                         \
     do                                                                        \
     {                                                                         \
         PyErr_Format(PyExc_NotImplementedError,                               \
@@ -25,7 +23,7 @@
         return -1;                                                            \
     } while (0)
 
-#define PY_DEBUG_PRINT(obj)                                                   \
+#define NTPY_DEBUG_PRINT(obj)                                                 \
     do                                                                        \
     {                                                                         \
         PyObject *_repr = PyObject_Repr(obj);                                 \

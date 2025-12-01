@@ -230,7 +230,6 @@ static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
     PyObject *token_view = NULL;
     PyObject *list = NULL;
     PyObject *args = NULL;
-    PyObject *item = NULL;
     PyObject *result = NULL;
 
     token_view =
@@ -241,7 +240,7 @@ static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
         goto cleanup;
     }
 
-    list = PyList_New(end_pos + 1);
+    list = PyList_New(0);
     if (!list)
     {
         goto cleanup;
@@ -252,13 +251,8 @@ static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
     {
         for (Py_ssize_t i = 0; i <= page->count; i++)
         {
-            pos++;
-            item = Py_NewRef(page->objs[i]);
-
-            if (PyList_SetItem(list, i, item) < 0)
+            if (PyList_Append(list, page->objs[i]) < 0)
             {
-                // Undo the INCREF if insertion failed.
-                Py_DECREF(item);
                 goto cleanup;
             }
 
@@ -266,6 +260,8 @@ static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
             {
                 goto end;
             }
+
+            pos++;
         }
 
         page = page->next;

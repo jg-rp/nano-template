@@ -31,7 +31,8 @@ void NT_RenderContext_free(NT_RenderContext *ctx);
 /// @brief Lookup `key` in the current scope.
 /// @return 0 if out was set to a new reference, or 1 if `key` is not in scope
 /// or `key` is not a Python str.
-int NT_RenderContext_get(NT_RenderContext *ctx, PyObject *key, PyObject **out);
+int NT_RenderContext_get(const NT_RenderContext *ctx, PyObject *key,
+                         PyObject **out);
 
 /// @brief Extend scope with mapping `namespace`.
 /// A reference to `namespace` is stolen and DECREFed in

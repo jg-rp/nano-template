@@ -3,13 +3,13 @@
 #include "nano_template/expression.h"
 #include "nano_template/py_token_view.h"
 
-typedef PyObject *(*EvalFn)(NT_Expr *expr, NT_RenderContext *ctx);
+typedef PyObject *(*EvalFn)(const NT_Expr *expr, NT_RenderContext *ctx);
 
-static PyObject *eval_not_expr(NT_Expr *expr, NT_RenderContext *ctx);
-static PyObject *eval_and_expr(NT_Expr *expr, NT_RenderContext *ctx);
-static PyObject *eval_or_expr(NT_Expr *expr, NT_RenderContext *ctx);
-static PyObject *eval_str_expr(NT_Expr *expr, NT_RenderContext *ctx);
-static PyObject *eval_var_expr(NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_not_expr(const NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_and_expr(const NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_or_expr(const NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_str_expr(const NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_var_expr(const NT_Expr *expr, NT_RenderContext *ctx);
 
 static EvalFn eval_table[] = {
     [EXPR_NOT] = eval_not_expr, [EXPR_AND] = eval_and_expr,
@@ -19,10 +19,10 @@ static EvalFn eval_table[] = {
 
 /// @brief Construct a new instance of Undefined.
 /// @return A new Undefined object, or NULL on failure.
-static PyObject *undefined(NT_Expr *expr, NT_RenderContext *ctx,
-                           Py_ssize_t end_pos);
+static PyObject *undefined(const NT_Expr *expr, NT_RenderContext *ctx,
+                           size_t end_pos);
 
-PyObject *NT_Expr_evaluate(NT_Expr *expr, NT_RenderContext *ctx)
+PyObject *NT_Expr_evaluate(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     if (!expr)
     {
@@ -39,7 +39,7 @@ PyObject *NT_Expr_evaluate(NT_Expr *expr, NT_RenderContext *ctx)
     return fn(expr, ctx);
 }
 
-static PyObject *eval_not_expr(NT_Expr *expr, NT_RenderContext *ctx)
+static PyObject *eval_not_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
@@ -72,7 +72,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_and_expr(NT_Expr *expr, NT_RenderContext *ctx)
+static PyObject *eval_and_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *left = NULL;
     PyObject *right = NULL;
@@ -118,7 +118,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_or_expr(NT_Expr *expr, NT_RenderContext *ctx)
+static PyObject *eval_or_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *left = NULL;
     PyObject *right = NULL;
@@ -165,7 +165,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_str_expr(NT_Expr *expr, NT_RenderContext *ctx)
+static PyObject *eval_str_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     (void)ctx;
     if (!expr->head || expr->head->count < 1)
@@ -175,7 +175,7 @@ static PyObject *eval_str_expr(NT_Expr *expr, NT_RenderContext *ctx)
     return Py_NewRef(expr->head->objs[0]);
 }
 
-static PyObject *eval_var_expr(NT_Expr *expr, NT_RenderContext *ctx)
+static PyObject *eval_var_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
@@ -201,7 +201,7 @@ static PyObject *eval_var_expr(NT_Expr *expr, NT_RenderContext *ctx)
     NT_ObjPage *page = expr->head;
     while (page)
     {
-        for (Py_ssize_t i = 1; i < page->count; i++)
+        for (size_t i = 1; i < page->count; i++)
         {
             Py_DECREF(op);
             op = PyObject_GetItem(op, page->objs[i]);
@@ -224,8 +224,8 @@ cleanup:
     return result;
 }
 
-static PyObject *undefined(NT_Expr *expr, NT_RenderContext *ctx,
-                           Py_ssize_t end_pos)
+static PyObject *undefined(const NT_Expr *expr, NT_RenderContext *ctx,
+                           size_t end_pos)
 {
     PyObject *token_view = NULL;
     PyObject *list = NULL;
@@ -247,12 +247,12 @@ static PyObject *undefined(NT_Expr *expr, NT_RenderContext *ctx,
         goto cleanup;
     }
 
-    Py_ssize_t pos = 0;
+    size_t pos = 0;
     page = expr->head;
 
     while (page)
     {
-        for (Py_ssize_t i = 0; i <= page->count; i++)
+        for (size_t i = 0; i <= page->count; i++)
         {
             if (PyList_Append(list, page->objs[i]) < 0)
             {

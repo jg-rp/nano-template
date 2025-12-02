@@ -3,10 +3,10 @@
 #include "nano_template/allocator.h"
 
 /// @brief Allocate and initialize a new block of memory.
-static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, Py_ssize_t capacity);
+static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, size_t capacity);
 
 /// @brief Align `ptr` to the next integer divisible by `align`.
-static uintptr_t align_forward(uintptr_t ptr, Py_ssize_t align);
+static uintptr_t align_forward(uintptr_t ptr, size_t align);
 
 /// @brief Reallocate objs.
 static int NT_Mem_grow_refs(NT_Mem *self);
@@ -44,15 +44,15 @@ int NT_Mem_init(NT_Mem *self)
     return 0;
 }
 
-void *NT_Mem_alloc(NT_Mem *self, Py_ssize_t size)
+void *NT_Mem_alloc(NT_Mem *self, size_t size)
 {
     uintptr_t current_ptr = self->head->data + self->head->used;
     uintptr_t aligned_ptr = align_forward(current_ptr, sizeof(void *));
-    Py_ssize_t required = size + aligned_ptr - current_ptr;
+    size_t required = size + aligned_ptr - current_ptr;
 
     if (self->head->used + required > self->head->capacity)
     {
-        Py_ssize_t new_cap =
+        size_t new_cap =
             (size > DEFAULT_BLOCK_SIZE) ? size : DEFAULT_BLOCK_SIZE;
 
         NT_MemBlock *new_block = NT_Mem_new_block(self->head, new_cap);
@@ -66,8 +66,9 @@ void *NT_Mem_alloc(NT_Mem *self, Py_ssize_t size)
         aligned_ptr = align_forward(current_ptr, sizeof(void *));
     }
 
-    Py_ssize_t padding = aligned_ptr - (self->head->data + self->head->used);
+    uintptr_t padding = aligned_ptr - (self->head->data + self->head->used);
     self->head->used += size + padding;
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return (void *)aligned_ptr;
 }
 
@@ -109,7 +110,7 @@ void NT_Mem_free(NT_Mem *self)
 
     if (self->objs)
     {
-        for (Py_ssize_t i = 0; i < self->obj_count; i++)
+        for (size_t i = 0; i < self->obj_count; i++)
         {
             Py_XDECREF(self->objs[i]);
         }
@@ -134,7 +135,8 @@ void NT_Mem_free(NT_Mem *self)
 
 static int NT_Mem_grow_refs(NT_Mem *self)
 {
-    Py_ssize_t new_cap = (self->obj_capacity < 8) ? 8 : self->obj_capacity * 2;
+    // NOLINTNEXTLINE(readability-magic-numbers)
+    size_t new_cap = (self->obj_capacity < 8) ? 8 : self->obj_capacity * 2;
     PyObject **new_objs = NULL;
 
     if (!self->objs)
@@ -157,7 +159,7 @@ static int NT_Mem_grow_refs(NT_Mem *self)
     return 0;
 }
 
-static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, Py_ssize_t capacity)
+static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, size_t capacity)
 {
     void *mem = PyMem_Malloc(sizeof(NT_MemBlock) + capacity);
     if (!mem)
@@ -174,9 +176,9 @@ static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, Py_ssize_t capacity)
     return block;
 }
 
-uintptr_t align_forward(uintptr_t ptr, Py_ssize_t align)
+uintptr_t align_forward(uintptr_t ptr, size_t align)
 {
-    Py_ssize_t modulo = ptr & (align - 1);
+    size_t modulo = ptr & (align - 1);
 
     if (modulo != 0)
     {

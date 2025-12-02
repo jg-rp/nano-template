@@ -4,12 +4,20 @@
 #include "nano_template/string_buffer.h"
 
 /// @brief Render `node` to `buf` with data from render context `ctx`.
-typedef int (*RenderFn)(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+typedef int (*RenderFn)(const NT_Node *node, NT_RenderContext *ctx,
+                        PyObject *buf);
 
-static int render_output(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
-static int render_if_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
-static int render_for_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
-static int render_text(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+static int render_output(const NT_Node *node, NT_RenderContext *ctx,
+                         PyObject *buf);
+
+static int render_if_tag(const NT_Node *node, NT_RenderContext *ctx,
+                         PyObject *buf);
+
+static int render_for_tag(const NT_Node *node, NT_RenderContext *ctx,
+                          PyObject *buf);
+
+static int render_text(const NT_Node *node, NT_RenderContext *ctx,
+                       PyObject *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -29,7 +37,7 @@ static int render_conditional_block(NT_Node *node, NT_RenderContext *ctx,
 /// @return 0 on success, 1 if op is not iterable, -1 on error.
 static int iter(PyObject *op, PyObject **out_iter);
 
-int NT_Node_render(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
+int NT_Node_render(const NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     if (!node)
     {
@@ -45,7 +53,8 @@ int NT_Node_render(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
     return fn(node, ctx, buf);
 }
 
-static int render_output(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
+static int render_output(const NT_Node *node, NT_RenderContext *ctx,
+                         PyObject *buf)
 {
     PyObject *str = NULL;
     PyObject *op = NT_Expr_evaluate(node->expr, ctx);
@@ -78,7 +87,8 @@ fail:
     return -1;
 }
 
-static int render_if_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
+static int render_if_tag(const NT_Node *node, NT_RenderContext *ctx,
+                         PyObject *buf)
 {
     int rv = 0;
     NT_Node *child = NULL;
@@ -111,7 +121,8 @@ static int render_if_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
     return 0;
 }
 
-static int render_for_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
+static int render_for_tag(const NT_Node *node, NT_RenderContext *ctx,
+                          PyObject *buf)
 {
     if (!node->head)
     {
@@ -220,7 +231,8 @@ fail:
     return -1;
 }
 
-static int render_text(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
+static int render_text(const NT_Node *node, NT_RenderContext *ctx,
+                       PyObject *buf)
 {
     (void)ctx;
 

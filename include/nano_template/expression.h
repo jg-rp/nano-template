@@ -24,7 +24,7 @@ typedef enum
 typedef struct NT_ObjPage
 {
     struct NT_ObjPage *next;
-    Py_ssize_t count;
+    size_t count;
     PyObject *objs[NT_OBJ_PRE_PAGE];
 } NT_ObjPage;
 
@@ -49,6 +49,6 @@ typedef struct NT_Expr
 
 /// @brief Evaluate expression `expr` with data from context `ctx`.
 /// @return Arbitrary Python object, or NULL on failure.
-PyObject *NT_Expr_evaluate(NT_Expr *expr, NT_RenderContext *ctx);
+PyObject *NT_Expr_evaluate(const NT_Expr *expr, NT_RenderContext *ctx);
 
 #endif

@@ -5,14 +5,14 @@
 
 #include "nano_template/common.h"
 
-#define DEFAULT_BLOCK_SIZE (1024 * 4)
+#define DEFAULT_BLOCK_SIZE (size_t)(1024 * 4)
 
 /// @brief Allocator block header.
 typedef struct NT_MemBlock
 {
     struct NT_MemBlock *prev;
-    Py_ssize_t capacity;
-    Py_ssize_t used;
+    size_t capacity;
+    size_t used;
     uintptr_t data;
 } NT_MemBlock;
 
@@ -21,8 +21,8 @@ typedef struct NT_Mem
 {
     NT_MemBlock *head;
     PyObject **objs;
-    Py_ssize_t obj_count;
-    Py_ssize_t obj_capacity;
+    size_t obj_count;
+    size_t obj_capacity;
 } NT_Mem;
 
 /// @brief Allocate and initialize a new allocator with a single block.
@@ -36,7 +36,7 @@ int NT_Mem_init(NT_Mem *self);
 
 /// @brief Allocate `size` bytes.
 /// @return A pointer to the start of the allocated bytes, or NULL on failure.
-void *NT_Mem_alloc(NT_Mem *self, Py_ssize_t size);
+void *NT_Mem_alloc(NT_Mem *self, size_t size);
 
 /// @brief Register `obj` as a new reference.
 /// Increments `obj`s reference count.

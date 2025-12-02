@@ -7,28 +7,29 @@
 
 /// @brief Parse hex digits in `str` starting at position `pos`.
 /// @return A code point, or -1 on failure with an exception set.
-static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
-                                         NT_Token *token);
+static inline Py_UCS4 code_point_from_digits(PyObject *str, Py_ssize_t *pos,
+                                             const NT_Token *token);
 
 /// Return true is `code_point` is a high surrogate, false otherwise.
-static inline bool is_high_surrogate(int code_point);
+static inline bool is_high_surrogate(Py_UCS4 code_point);
 
 /// Return true is `code_point` is a low surrogate, false otherwise.
-static inline bool is_low_surrogate(int code_point);
+static inline bool is_low_surrogate(Py_UCS4 code_point);
 
 /// @brief Decode `XXXX` or `XXXX\uXXXX` sequence in `str` starting at
 /// position `pos`.
 /// @return A new Unicode object, or NULL on failure with an exception set.
 static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
-                                       Py_ssize_t length, NT_Token *token);
+                                       Py_ssize_t length,
+                                       const NT_Token *token);
 
 /// @brief Decode a `\X`, `\uXXXX` or `\uXXXX\uXXXX` sequence in `str` starting
 /// at position `pos`.
 /// @return A new Unicode object, or NULL on failure with an exception set.
 static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
-                               Py_ssize_t length, NT_Token *token);
+                               Py_ssize_t length, const NT_Token *token);
 
-PyObject *unescape(NT_Token *token, PyObject *source)
+PyObject *unescape(const NT_Token *token, PyObject *source)
 {
     PyObject *result = NULL;
     PyObject *buf = NULL;
@@ -122,7 +123,7 @@ cleanup:
 }
 
 static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
-                               Py_ssize_t length, NT_Token *token)
+                               Py_ssize_t length, const NT_Token *token)
 {
     (*pos)++; // Move past `\`
     if (*pos >= length)
@@ -178,7 +179,8 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
 }
 
 static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
-                                       Py_ssize_t length, NT_Token *token)
+                                       Py_ssize_t length,
+                                       const NT_Token *token)
 {
     if (*pos + 3 >= length)
     {
@@ -201,6 +203,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
     if (is_high_surrogate(code_point))
     {
         // Expect `\uXXXX`
+        // NOLINTNEXTLINE(readability-magic-numbers)
         if (*pos + 5 >= length)
         {
             nt_parser_error(token, "incomplete escape sequence");
@@ -230,27 +233,31 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
             return NULL;
         }
 
+        // NOLINTBEGIN(readability-magic-numbers)
         code_point = 0x10000 + (((code_point & 0x03FF) << 10) |
                                 (low_surrogate & 0x03FF));
+        // NOLINTEND(readability-magic-numbers)
     }
 
-    return PyUnicode_FromOrdinal(code_point);
+    return PyUnicode_FromOrdinal((int)code_point);
 }
 
-static inline bool is_high_surrogate(int code_point)
+static inline bool is_high_surrogate(Py_UCS4 code_point)
 {
+    // NOLINTNEXTLINE(readability-magic-numbers)
     return code_point >= 0xD800 && code_point <= 0xDBFF;
 }
 
-static inline bool is_low_surrogate(int code_point)
+static inline bool is_low_surrogate(Py_UCS4 code_point)
 {
+    // NOLINTNEXTLINE(readability-magic-numbers)
     return code_point >= 0xDC00 && code_point <= 0xDFFF;
 }
 
-static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
-                                         NT_Token *token)
+static inline Py_UCS4 code_point_from_digits(PyObject *str, Py_ssize_t *pos,
+                                             const NT_Token *token)
 {
-    int code_point = 0;
+    Py_UCS4 code_point = 0;
 
     for (Py_ssize_t i = 0; i < 4; i++)
     {
@@ -260,6 +267,7 @@ static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
             return -1;
         }
 
+        // NOLINTNEXTLINE(readability-magic-numbers)
         code_point <<= 4;
 
         switch (digit)
@@ -282,6 +290,7 @@ static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
         case 'd':
         case 'e':
         case 'f':
+            // NOLINTNEXTLINE(readability-magic-numbers)
             code_point |= (digit - 'a' + 10);
             break;
         case 'A':
@@ -290,6 +299,7 @@ static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
         case 'D':
         case 'E':
         case 'F':
+            // NOLINTNEXTLINE(readability-magic-numbers)
             code_point |= (digit - 'A' + 10);
             break;
         default:

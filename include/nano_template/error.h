@@ -8,7 +8,7 @@
 #include <stdarg.h>
 
 /// @brief Set a RuntimeError with start and stop index from `token`.
-static void *nt_parser_error(NT_Token *token, const char *fmt, ...)
+static void *nt_parser_error(const NT_Token *token, const char *fmt, ...)
 {
     PyObject *exc_instance = NULL;
     PyObject *start_obj = NULL;

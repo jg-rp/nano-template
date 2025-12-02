@@ -33,9 +33,6 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj);
 /// Return the precedence for the given token kind.
 static inline Precedence precedence(NT_TokenKind kind);
 
-/// Set a RuntimeError with details from `token` and return NULL.
-static void *nt_parser_error(NT_Token *token, const char *fmt, ...);
-
 /// Advance the parser if the current token is a whitespace control token.
 static inline void NT_Parser_skip_wc(NT_Parser *p);
 

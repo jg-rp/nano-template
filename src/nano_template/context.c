@@ -23,8 +23,8 @@ NT_RenderContext *NT_RenderContext_new(PyObject *str, PyObject *globals,
     ctx->capacity = 0;
     ctx->serializer = serializer;
     ctx->undefined = undefined;
-    NT_RenderContext_push(ctx, globals);
 
+    NT_RenderContext_push(ctx, globals);
     return ctx;
 }
 
@@ -43,7 +43,8 @@ void NT_RenderContext_free(NT_RenderContext *ctx)
     PyMem_Free(ctx);
 }
 
-int NT_RenderContext_get(NT_RenderContext *ctx, PyObject *key, PyObject **out)
+int NT_RenderContext_get(const NT_RenderContext *ctx, PyObject *key,
+                         PyObject **out)
 {
     PyObject *obj = NULL;
 

@@ -48,6 +48,6 @@ typedef struct NT_Node
 
 /// @brief Render node `node` to `buf` with data from `ctx`.
 /// @return 0 on success, -1 on failure with a Python error set.
-int NT_Node_render(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+int NT_Node_render(const NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
 
 #endif

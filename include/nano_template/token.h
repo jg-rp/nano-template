@@ -104,7 +104,7 @@ static inline bool NT_Token_mask_test(NT_TokenKind kind, NT_TokenMask mask)
     return (mask & ((Py_ssize_t)1 << kind)) != 0;
 }
 
-static inline NT_Token *NT_Token_copy(NT_Token *self)
+static inline NT_Token *NT_Token_copy(const NT_Token *self)
 {
     NT_Token *token = (NT_Token *)PyMem_Malloc(sizeof(NT_Token));
     if (!token)

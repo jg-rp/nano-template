@@ -1188,7 +1188,6 @@ static inline PyObject *NT_Token_text(NT_Token *token, PyObject *str)
     return PyUnicode_Substring(str, token->start, token->end);
 }
 
-// TODO: refactor
 static PyObject *trim(PyObject *value, NT_TokenKind left, NT_TokenKind right)
 {
     PyObject *result = NULL;

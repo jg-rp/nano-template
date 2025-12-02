@@ -7,56 +7,68 @@
 
 PyObject *tokenize(PyObject *Py_UNUSED(self), PyObject *str)
 {
-    // TODO: declare and use goto fail more
-    NT_Lexer *lexer = NT_Lexer_new(str);
+    NT_Lexer *lexer = NULL;
+    NT_Token *tokens = NULL;
+    PyObject *list = NULL;
+    PyObject *view = NULL;
+    PyObject *result = NULL;
+
+    lexer = NT_Lexer_new(str);
     if (!lexer)
     {
         return NULL;
     }
 
     Py_ssize_t token_count = 0;
-    NT_Token *tokens = NT_Lexer_scan(lexer, &token_count);
+
+    tokens = NT_Lexer_scan(lexer, &token_count);
     if (!tokens)
     {
         NT_Lexer_free(lexer);
         return NULL;
     }
 
-    PyObject *list = PyList_New(token_count);
+    list = PyList_New(token_count);
     if (!list)
     {
-        goto fail;
+        goto cleanup;
     }
 
     for (Py_ssize_t i = 0; i < token_count; i++)
     {
         NT_Token token = tokens[i];
-        PyObject *view =
-            NTPY_TokenView_new(str, token.start, token.end, token.kind);
+        view = NTPY_TokenView_new(str, token.start, token.end, token.kind);
 
         if (!view)
         {
-            goto fail;
+            goto cleanup;
         }
 
         if (PyList_SetItem(list, i, view) < 0)
         {
             Py_DECREF(view);
-            goto fail;
+            view = NULL;
+            goto cleanup;
         }
+
+        view = NULL;
     }
 
-    PyMem_Free(tokens);
-    NT_Lexer_free(lexer);
-    return list;
+    result = Py_NewRef(list);
 
-fail:
+cleanup:
     if (tokens)
     {
         PyMem_Free(tokens);
         tokens = NULL;
     }
-    NT_Lexer_free(lexer);
+
+    if (lexer)
+    {
+        NT_Lexer_free(lexer);
+        lexer = NULL;
+    }
+
     Py_XDECREF(list);
-    return NULL;
+    return result;
 }

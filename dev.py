@@ -1,18 +1,6 @@
-from typing import Iterator
-import nano_template as nt
+from nano_template import render
 
+source = "{% if a %}a{% else %}b{% else %}c{% endif %}"
+data = {"a": False, "b": False}
 
-class MyUndefined(nt.Undefined):
-    def __str__(self) -> str:
-        return "<MISSING>"
-
-    def __bool__(self) -> bool:
-        return False
-
-    def __iter__(self) -> Iterator[object]:
-        yield from ()
-
-
-t = nt.parse("{{ foo.nosuchthing }}", undefined=MyUndefined)
-
-print(t.render({"foo": {}}))  # <MISSING>
+print(render(None, data))

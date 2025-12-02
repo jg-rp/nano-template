@@ -17,7 +17,8 @@ static EvalFn eval_table[] = {
     [EXPR_VAR] = eval_var_expr,
 };
 
-static PyObject *undefined(NT_Expr *expr, NT_Context *ctx, Py_ssize_t end_pos);
+static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
+                           NT_Token *token, NT_Context *ctx);
 
 PyObject *NT_Expression_evaluate(NT_Expr *self, NT_Context *ctx)
 {
@@ -165,60 +166,53 @@ cleanup:
 static PyObject *eval_str_expr(NT_Expr *expr, NT_Context *ctx)
 {
     (void)ctx;
-    return Py_NewRef(expr->obj);
+    if (!expr->head || expr->head->count < 1)
+    {
+        return NULL;
+    }
+    return Py_NewRef(expr->head->objs[0]);
 }
 
 static PyObject *eval_var_expr(NT_Expr *expr, NT_Context *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
-    PyObject *segment = NULL;
-    PyObject *path = expr->obj;
-    Py_ssize_t path_length = PyList_Size(path);
 
-    if (path_length < 1)
+    if (!expr->head || expr->head->count == 0)
     {
-        return NULL;
-    }
-
-    segment = PyList_GetItem(path, 0);
-    if (!segment)
-    {
-        PyErr_Clear();
-        return NULL;
-    }
-
-    if (NT_Context_get(ctx, segment, &op) < 0)
-    {
-        result = undefined(expr, ctx, 0);
+        result = Py_NewRef(Py_None);
         goto cleanup;
     }
 
-    if (path_length == 1)
+    if (NT_Context_get(ctx, expr->head->objs[0], &op) < 0)
+    {
+        result = undefined(expr->head, 0, expr->token, ctx);
+        goto cleanup;
+    }
+
+    if (expr->head->count == 1)
     {
         result = Py_NewRef(op);
         goto cleanup;
     }
 
-    for (Py_ssize_t i = 1; i < path_length; i++)
+    NT_ObjPage *page = expr->head;
+    while (page)
     {
-        segment = PyList_GetItem(path, i);
-        if (!segment)
+        for (Py_ssize_t i = 1; i < page->count; i++)
         {
-            PyErr_Clear();
-            result = undefined(expr, ctx, i);
-            goto cleanup;
+            Py_DECREF(op);
+            op = PyObject_GetItem(op, page->objs[i]);
+
+            if (!op)
+            {
+                PyErr_Clear();
+                result = undefined(expr->head, i, expr->token, ctx);
+                goto cleanup;
+            }
         }
 
-        Py_DECREF(op);
-        op = PyObject_GetItem(op, segment);
-
-        if (!op)
-        {
-            PyErr_Clear();
-            result = undefined(expr, ctx, i);
-            goto cleanup;
-        }
+        page = page->next;
     }
 
     result = Py_NewRef(op);
@@ -230,28 +224,51 @@ cleanup:
 
 /// @brief Construct a new instance of Undefined.
 /// @return A new Undefined object, or NULL on failure.
-static PyObject *undefined(NT_Expr *expr, NT_Context *ctx, Py_ssize_t end_pos)
+static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
+                           NT_Token *token, NT_Context *ctx)
 {
     PyObject *token_view = NULL;
-    PyObject *segments = NULL;
+    PyObject *list = NULL;
     PyObject *args = NULL;
     PyObject *result = NULL;
 
-    token_view = NTPY_TokenView_new(ctx->str, expr->token->start,
-                                    expr->token->end, expr->token->kind);
+    token_view =
+        NTPY_TokenView_new(ctx->str, token->start, token->end, token->kind);
 
     if (!token_view)
     {
         goto cleanup;
     }
 
-    segments = PyList_GetSlice(expr->obj, 0, end_pos + 1);
-    if (!segments)
+    list = PyList_New(0);
+    if (!list)
     {
         goto cleanup;
     }
 
-    args = Py_BuildValue("(O, O, O)", ctx->str, segments, token_view);
+    Py_ssize_t pos = 0;
+    while (page)
+    {
+        for (Py_ssize_t i = 0; i <= page->count; i++)
+        {
+            if (PyList_Append(list, page->objs[i]) < 0)
+            {
+                goto cleanup;
+            }
+
+            if (pos >= end_pos)
+            {
+                goto end;
+            }
+
+            pos++;
+        }
+
+        page = page->next;
+    }
+
+end:
+    args = Py_BuildValue("(O, O, O)", ctx->str, list, token_view);
     if (!args)
     {
         goto cleanup;
@@ -262,7 +279,7 @@ static PyObject *undefined(NT_Expr *expr, NT_Context *ctx, Py_ssize_t end_pos)
 
 cleanup:
     Py_XDECREF(token_view);
-    Py_XDECREF(segments);
+    Py_XDECREF(list);
     Py_XDECREF(args);
     return result;
 }

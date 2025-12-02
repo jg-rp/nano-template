@@ -47,17 +47,18 @@ PyObject *NTPY_Template_new(PyObject *str, NT_Node *root, NT_Mem *ast,
 }
 
 /// @brief Render template with data from `globals`.
-/// @param globals A mapping of strings to Python objects.
-/// @return The rendered string on success, or `NULL` on error with a Python
+/// @param globals dict[str, Any]
+/// @return The rendered string on success, or `NULL` on error with an
 /// exception set.
 static PyObject *NTPY_Template_render(PyObject *self, PyObject *globals)
 {
     NTPY_Template *op = (NTPY_Template *)self;
-    NT_Context *ctx = NULL;
+    NT_RenderContext *ctx = NULL;
     PyObject *buf = NULL;
     PyObject *rv = NULL;
 
-    ctx = NT_Context_new(op->str, globals, op->serializer, op->undefined);
+    ctx =
+        NT_RenderContext_new(op->str, globals, op->serializer, op->undefined);
     if (!ctx)
     {
         goto fail;
@@ -91,13 +92,13 @@ static PyObject *NTPY_Template_render(PyObject *self, PyObject *globals)
         goto fail;
     }
 
-    NT_Context_free(ctx);
+    NT_RenderContext_free(ctx);
     return rv;
 
 fail:
     if (ctx)
     {
-        NT_Context_free(ctx);
+        NT_RenderContext_free(ctx);
     }
     Py_XDECREF(buf);
     Py_XDECREF(rv);

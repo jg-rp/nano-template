@@ -90,8 +90,6 @@ typedef struct NT_Token
     NT_TokenKind kind;
 } NT_Token;
 
-/// @brief Make a new token.
-/// @return The new token by value.
 static inline NT_Token NT_Token_make(Py_ssize_t start, Py_ssize_t end,
                                      NT_TokenKind kind)
 {
@@ -99,7 +97,6 @@ static inline NT_Token NT_Token_make(Py_ssize_t start, Py_ssize_t end,
     return token;
 }
 
-// Assumes number of tokens is less than 32 or 64.
 typedef Py_ssize_t NT_TokenMask;
 
 static inline bool NT_Token_mask_test(NT_TokenKind kind, NT_TokenMask mask)

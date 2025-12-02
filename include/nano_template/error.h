@@ -7,8 +7,8 @@
 #include "nano_template/token.h"
 #include <stdarg.h>
 
-// TODO: rename with prefix
-static void *parser_error(NT_Token *token, const char *fmt, ...)
+/// @brief Set a RuntimeError with start and stop index from `token`.
+static void *nt_parser_error(NT_Token *token, const char *fmt, ...)
 {
     PyObject *exc_instance = NULL;
     PyObject *start_obj = NULL;

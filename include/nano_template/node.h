@@ -9,7 +9,6 @@
 
 #define NT_CHILDREN_PER_PAGE 4
 
-/// @brief AST node kinds.
 typedef enum
 {
     NODE_ROOT = 1,
@@ -23,7 +22,7 @@ typedef enum
     NODE_TEXT
 } NT_NodeKind;
 
-/// @brief One block of a paged array holding AST nodes.
+/// @brief One block of a paged array (unrolled linked list) holding AST nodes.
 typedef struct NT_NodePage
 {
     struct NT_NodePage *next;
@@ -31,7 +30,6 @@ typedef struct NT_NodePage
     struct NT_Node *nodes[NT_CHILDREN_PER_PAGE];
 } NT_NodePage;
 
-/// @brief Internal AST node.
 typedef struct NT_Node
 {
     // Paged array holding child nodes.
@@ -50,6 +48,6 @@ typedef struct NT_Node
 
 /// @brief Render node `node` to `buf` with data from `ctx`.
 /// @return 0 on success, -1 on failure with a Python error set.
-int NT_Node_render(NT_Node *node, NT_Context *ctx, PyObject *buf);
+int NT_Node_render(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
 
 #endif

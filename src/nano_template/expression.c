@@ -3,13 +3,13 @@
 #include "nano_template/expression.h"
 #include "nano_template/py_token_view.h"
 
-typedef PyObject *(*EvalFn)(NT_Expr *expr, NT_Context *ctx);
+typedef PyObject *(*EvalFn)(NT_Expr *expr, NT_RenderContext *ctx);
 
-static PyObject *eval_not_expr(NT_Expr *expr, NT_Context *ctx);
-static PyObject *eval_and_expr(NT_Expr *expr, NT_Context *ctx);
-static PyObject *eval_or_expr(NT_Expr *expr, NT_Context *ctx);
-static PyObject *eval_str_expr(NT_Expr *expr, NT_Context *ctx);
-static PyObject *eval_var_expr(NT_Expr *expr, NT_Context *ctx);
+static PyObject *eval_not_expr(NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_and_expr(NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_or_expr(NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_str_expr(NT_Expr *expr, NT_RenderContext *ctx);
+static PyObject *eval_var_expr(NT_Expr *expr, NT_RenderContext *ctx);
 
 static EvalFn eval_table[] = {
     [EXPR_NOT] = eval_not_expr, [EXPR_AND] = eval_and_expr,
@@ -17,27 +17,29 @@ static EvalFn eval_table[] = {
     [EXPR_VAR] = eval_var_expr,
 };
 
-static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
-                           NT_Token *token, NT_Context *ctx);
+/// @brief Construct a new instance of Undefined.
+/// @return A new Undefined object, or NULL on failure.
+static PyObject *undefined(NT_Expr *expr, NT_RenderContext *ctx,
+                           Py_ssize_t end_pos);
 
-PyObject *NT_Expression_evaluate(NT_Expr *self, NT_Context *ctx)
+PyObject *NT_Expr_evaluate(NT_Expr *expr, NT_RenderContext *ctx)
 {
-    if (!self)
+    if (!expr)
     {
         return NULL;
     }
 
-    EvalFn fn = eval_table[self->kind];
+    EvalFn fn = eval_table[expr->kind];
 
     if (!fn)
     {
         return NULL;
     }
 
-    return fn(self, ctx);
+    return fn(expr, ctx);
 }
 
-static PyObject *eval_not_expr(NT_Expr *expr, NT_Context *ctx)
+static PyObject *eval_not_expr(NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
@@ -48,7 +50,7 @@ static PyObject *eval_not_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    op = NT_Expression_evaluate(expr->right, ctx);
+    op = NT_Expr_evaluate(expr->right, ctx);
     if (!op)
     {
         goto cleanup;
@@ -70,7 +72,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_and_expr(NT_Expr *expr, NT_Context *ctx)
+static PyObject *eval_and_expr(NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *left = NULL;
     PyObject *right = NULL;
@@ -82,7 +84,7 @@ static PyObject *eval_and_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    left = NT_Expression_evaluate(expr->left, ctx);
+    left = NT_Expr_evaluate(expr->left, ctx);
     if (!left)
     {
         goto cleanup;
@@ -101,7 +103,7 @@ static PyObject *eval_and_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    right = NT_Expression_evaluate(expr->right, ctx);
+    right = NT_Expr_evaluate(expr->right, ctx);
     if (!right)
     {
         goto cleanup;
@@ -116,7 +118,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_or_expr(NT_Expr *expr, NT_Context *ctx)
+static PyObject *eval_or_expr(NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *left = NULL;
     PyObject *right = NULL;
@@ -128,7 +130,7 @@ static PyObject *eval_or_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    left = NT_Expression_evaluate(expr->left, ctx);
+    left = NT_Expr_evaluate(expr->left, ctx);
 
     if (!left)
     {
@@ -148,7 +150,7 @@ static PyObject *eval_or_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    right = NT_Expression_evaluate(expr->right, ctx);
+    right = NT_Expr_evaluate(expr->right, ctx);
     if (!right)
     {
         goto cleanup;
@@ -163,7 +165,7 @@ cleanup:
     return result;
 }
 
-static PyObject *eval_str_expr(NT_Expr *expr, NT_Context *ctx)
+static PyObject *eval_str_expr(NT_Expr *expr, NT_RenderContext *ctx)
 {
     (void)ctx;
     if (!expr->head || expr->head->count < 1)
@@ -173,7 +175,7 @@ static PyObject *eval_str_expr(NT_Expr *expr, NT_Context *ctx)
     return Py_NewRef(expr->head->objs[0]);
 }
 
-static PyObject *eval_var_expr(NT_Expr *expr, NT_Context *ctx)
+static PyObject *eval_var_expr(NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
@@ -184,9 +186,9 @@ static PyObject *eval_var_expr(NT_Expr *expr, NT_Context *ctx)
         goto cleanup;
     }
 
-    if (NT_Context_get(ctx, expr->head->objs[0], &op) < 0)
+    if (NT_RenderContext_get(ctx, expr->head->objs[0], &op) < 0)
     {
-        result = undefined(expr->head, 0, expr->token, ctx);
+        result = undefined(expr, ctx, 0);
         goto cleanup;
     }
 
@@ -207,7 +209,7 @@ static PyObject *eval_var_expr(NT_Expr *expr, NT_Context *ctx)
             if (!op)
             {
                 PyErr_Clear();
-                result = undefined(expr->head, i, expr->token, ctx);
+                result = undefined(expr, ctx, i);
                 goto cleanup;
             }
         }
@@ -222,18 +224,17 @@ cleanup:
     return result;
 }
 
-/// @brief Construct a new instance of Undefined.
-/// @return A new Undefined object, or NULL on failure.
-static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
-                           NT_Token *token, NT_Context *ctx)
+static PyObject *undefined(NT_Expr *expr, NT_RenderContext *ctx,
+                           Py_ssize_t end_pos)
 {
     PyObject *token_view = NULL;
     PyObject *list = NULL;
     PyObject *args = NULL;
     PyObject *result = NULL;
+    NT_ObjPage *page = NULL;
 
-    token_view =
-        NTPY_TokenView_new(ctx->str, token->start, token->end, token->kind);
+    token_view = NTPY_TokenView_new(ctx->str, expr->token->start,
+                                    expr->token->end, expr->token->kind);
 
     if (!token_view)
     {
@@ -247,6 +248,8 @@ static PyObject *undefined(NT_ObjPage *page, Py_ssize_t end_pos,
     }
 
     Py_ssize_t pos = 0;
+    page = expr->head;
+
     while (page)
     {
         for (Py_ssize_t i = 0; i <= page->count; i++)

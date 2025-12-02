@@ -84,10 +84,9 @@ NT_Lexer *NT_Lexer_new(PyObject *str)
     lexer->length = length;
     lexer->pos = 0;
     lexer->state = NULL;
-    lexer->stack_size = 0;
+    lexer->stack_capacity = 0;
     lexer->stack_top = 0;
 
-    // TODO: check the return type of NT_Lexer_push throughout.
     NT_Lexer_push(lexer, STATE_MARKUP);
     return lexer;
 }
@@ -97,7 +96,7 @@ void NT_Lexer_free(NT_Lexer *l)
     Py_DECREF(l->str);
     PyMem_Free(l->state);
     l->state = NULL;
-    l->stack_size = 0;
+    l->stack_capacity = 0;
     l->stack_top = 0;
     PyMem_Free(l);
     l->pos = 0;
@@ -602,10 +601,10 @@ static inline bool is_word_char(Py_UCS4 ch)
 
 static int NT_Lexer_push(NT_Lexer *l, NT_State state)
 {
-    if (l->stack_top >= l->stack_size)
+    if (l->stack_top >= l->stack_capacity)
     {
         // NOLINTNEXTLINE(readability-magic-numbers)
-        Py_ssize_t new_size = l->stack_size ? l->stack_size * 2 : 8;
+        Py_ssize_t new_size = l->stack_capacity ? l->stack_capacity * 2 : 8;
         NT_State *new_state = NULL;
 
         if (!l->state)
@@ -624,7 +623,7 @@ static int NT_Lexer_push(NT_Lexer *l, NT_State state)
         }
 
         l->state = new_state;
-        l->stack_size = new_size;
+        l->stack_capacity = new_size;
     }
 
     l->state[l->stack_top++] = state;

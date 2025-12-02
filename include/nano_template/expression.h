@@ -9,7 +9,6 @@
 
 #define NT_OBJ_PRE_PAGE 4
 
-/// @brief Possible expression kinds.
 typedef enum
 {
     EXPR_BOOL = 1,
@@ -20,7 +19,8 @@ typedef enum
     EXPR_VAR
 } NT_ExprKind;
 
-/// @brief One block of a paged array holding Python objects.
+/// @brief One block of a paged array (unrolled linked list) holding Python
+/// objects.
 typedef struct NT_ObjPage
 {
     struct NT_ObjPage *next;
@@ -28,7 +28,6 @@ typedef struct NT_ObjPage
     PyObject *objs[NT_OBJ_PRE_PAGE];
 } NT_ObjPage;
 
-/// @brief Internal expression type.
 typedef struct NT_Expr
 {
     // Child expressions, like the left and right hand side of the `or`
@@ -36,7 +35,8 @@ typedef struct NT_Expr
     struct NT_Expr *left;
     struct NT_Expr *right;
 
-    // Paged array holding Python objects, like segments in a variable path.
+    // Paged array (unrolled linked list) holding Python objects, like segments
+    // in a variable path.
     NT_ObjPage *head;
     NT_ObjPage *tail;
 
@@ -47,8 +47,8 @@ typedef struct NT_Expr
     NT_ExprKind kind;
 } NT_Expr;
 
-/// @brief Evaluate expression `self` with data from context `ctx`.
+/// @brief Evaluate expression `expr` with data from context `ctx`.
 /// @return Arbitrary Python object, or NULL on failure.
-PyObject *NT_Expression_evaluate(NT_Expr *self, NT_Context *ctx);
+PyObject *NT_Expr_evaluate(NT_Expr *expr, NT_RenderContext *ctx);
 
 #endif

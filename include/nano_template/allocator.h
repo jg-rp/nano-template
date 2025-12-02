@@ -16,7 +16,7 @@ typedef struct NT_MemBlock
     uintptr_t data;
 } NT_MemBlock;
 
-/// @brief Arena allocator with PyObject reference management.
+/// @brief Arena allocator with PyObject reference ownership.
 typedef struct NT_Mem
 {
     NT_MemBlock *head;

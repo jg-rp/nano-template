@@ -4,12 +4,12 @@
 #include "nano_template/string_buffer.h"
 
 /// @brief Render `node` to `buf` with data from render context `ctx`.
-typedef int (*RenderFn)(NT_Node *node, NT_Context *ctx, PyObject *buf);
+typedef int (*RenderFn)(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
 
-static int render_output(NT_Node *node, NT_Context *ctx, PyObject *buf);
-static int render_if_tag(NT_Node *node, NT_Context *ctx, PyObject *buf);
-static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf);
-static int render_text(NT_Node *node, NT_Context *ctx, PyObject *buf);
+static int render_output(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+static int render_if_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+static int render_for_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
+static int render_text(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
 
 static RenderFn render_table[] = {
     [NODE_OUPUT] = render_output,
@@ -18,18 +18,18 @@ static RenderFn render_table[] = {
     [NODE_TEXT] = render_text,
 };
 
-static int render_block(NT_Node *node, NT_Context *ctx, PyObject *buf);
+static int render_block(NT_Node *node, NT_RenderContext *ctx, PyObject *buf);
 
 /// @brief Render node->children if node->expr is truthy.
 /// @return 1 if expr is truthy, 0 if expr is falsy, -1 on error.
-static int render_conditional_block(NT_Node *node, NT_Context *ctx,
+static int render_conditional_block(NT_Node *node, NT_RenderContext *ctx,
                                     PyObject *buf);
 
 /// @brief Get an iterator for object `op`.
 /// @return 0 on success, 1 if op is not iterable, -1 on error.
 static int iter(PyObject *op, PyObject **out_iter);
 
-int NT_Node_render(NT_Node *node, NT_Context *ctx, PyObject *buf)
+int NT_Node_render(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     if (!node)
     {
@@ -45,12 +45,10 @@ int NT_Node_render(NT_Node *node, NT_Context *ctx, PyObject *buf)
     return fn(node, ctx, buf);
 }
 
-static int render_output(NT_Node *node, NT_Context *ctx, PyObject *buf)
+static int render_output(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     PyObject *str = NULL;
-    PyObject *op = NT_Expression_evaluate(node->expr, ctx);
-
-    // TODO: or op is undefined
+    PyObject *op = NT_Expr_evaluate(node->expr, ctx);
 
     if (!op)
     {
@@ -80,7 +78,7 @@ fail:
     return -1;
 }
 
-static int render_if_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
+static int render_if_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     int rv = 0;
     NT_Node *child = NULL;
@@ -113,7 +111,7 @@ static int render_if_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
     return 0;
 }
 
-static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
+static int render_for_tag(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     if (!node->head)
     {
@@ -135,7 +133,7 @@ static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
     PyObject *namespace = NULL;
     PyObject *item = NULL;
 
-    op = NT_Expression_evaluate(node->expr, ctx);
+    op = NT_Expr_evaluate(node->expr, ctx);
     if (!op)
     {
         return -1;
@@ -168,7 +166,7 @@ static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
     }
 
     Py_INCREF(namespace);
-    if (NT_Context_push(ctx, namespace) < 0)
+    if (NT_RenderContext_push(ctx, namespace) < 0)
     {
         goto fail;
     }
@@ -202,7 +200,7 @@ static int render_for_tag(NT_Node *node, NT_Context *ctx, PyObject *buf)
     }
 
     Py_DECREF(it);
-    NT_Context_pop(ctx);
+    NT_RenderContext_pop(ctx);
     Py_DECREF(namespace);
 
     if (!rendered && child_count == 2)
@@ -222,7 +220,7 @@ fail:
     return -1;
 }
 
-static int render_text(NT_Node *node, NT_Context *ctx, PyObject *buf)
+static int render_text(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     (void)ctx;
 
@@ -234,7 +232,7 @@ static int render_text(NT_Node *node, NT_Context *ctx, PyObject *buf)
     return StringBuffer_append(buf, node->str);
 }
 
-static int render_block(NT_Node *node, NT_Context *ctx, PyObject *buf)
+static int render_block(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
     NT_NodePage *page = node->head;
     while (page)
@@ -252,7 +250,7 @@ static int render_block(NT_Node *node, NT_Context *ctx, PyObject *buf)
     return 0;
 }
 
-static int render_conditional_block(NT_Node *node, NT_Context *ctx,
+static int render_conditional_block(NT_Node *node, NT_RenderContext *ctx,
                                     PyObject *buf)
 {
     if (!node->expr)
@@ -260,7 +258,7 @@ static int render_conditional_block(NT_Node *node, NT_Context *ctx,
         return 0;
     }
 
-    PyObject *op = NT_Expression_evaluate(node->expr, ctx);
+    PyObject *op = NT_Expr_evaluate(node->expr, ctx);
     if (!op)
     {
         return -1;

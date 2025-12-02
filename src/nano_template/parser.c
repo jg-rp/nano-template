@@ -34,71 +34,72 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj);
 static inline Precedence precedence(NT_TokenKind kind);
 
 /// Set a RuntimeError with details from `token` and return NULL.
-static void *parser_error(NT_Token *token, const char *fmt, ...);
+static void *nt_parser_error(NT_Token *token, const char *fmt, ...);
 
 /// Advance the parser if the current token is a whitespace control token.
-static inline void NT_Parser_skip_wc(NT_Parser *self);
+static inline void NT_Parser_skip_wc(NT_Parser *p);
 
 /// Consume and store a whitespace control token for use by the next text
 /// block.
-static inline void NT_Parser_carry_wc(NT_Parser *self);
+static inline void NT_Parser_carry_wc(NT_Parser *p);
 
-/// Return the token at `self->pos` and advance position. Keep returning
+/// Return the token at `p->pos` and advance position. Keep returning
 /// TOK_EOF if there are no more tokens.
-static inline NT_Token *NT_Parser_next(NT_Parser *self);
+static inline NT_Token *NT_Parser_next(NT_Parser *p);
 
-/// Return the token at `self->pos` without advancing position.
-static inline NT_Token *NT_Parser_current(NT_Parser *self);
+/// Return the token at `p->pos` without advancing position.
+static inline NT_Token *NT_Parser_current(NT_Parser *p);
 
-/// Return the token at `self->pos + 1`.
-static inline NT_Token *NT_Parser_peek(NT_Parser *self);
+/// Return the token at `p->pos + 1`.
+static inline NT_Token *NT_Parser_peek(NT_Parser *p);
 
-/// Return the token at `self->pos + n`.
-static inline NT_Token *NT_Parser_peek_n(NT_Parser *self, Py_ssize_t n);
+/// Return the token at `p->pos + n`.
+static inline NT_Token *NT_Parser_peek_n(NT_Parser *p, Py_ssize_t n);
 
-/// Assert that the token at `self->pos` is of kind `kind` and advance the
+/// Assert that the token at `p->pos` is of kind `kind` and advance the
 /// position.
 ///
 /// Return the token on success. Set a RuntimeError and return NULL on failure.
-static inline NT_Token *NT_Parser_eat(NT_Parser *self, NT_TokenKind kind);
+static inline NT_Token *NT_Parser_eat(NT_Parser *p, NT_TokenKind kind);
 
 /// Consume TOK_TAG_START -> kind -> TOK_TAG_END with optional whitespace
 /// control.
 ///
 /// Set and exception and return NULL if we're not at a tag of kind `kind`.
-static NT_Token *NT_Parser_eat_empty_tag(NT_Parser *self, NT_TokenKind kind);
+static NT_Token *NT_Parser_eat_empty_tag(NT_Parser *p, NT_TokenKind kind);
 
 /// Assert that we're at a valid expression token.
 ///
 /// Set an exception and return -1 on failure. Return 0 on success.
-static inline int NT_Parser_expect_expression(NT_Parser *self);
+static inline int NT_Parser_expect_expression(NT_Parser *p);
 
 /// Return true if we're at the start of a tag with kind `kind`.
-static inline bool NT_Parser_tag(NT_Parser *self, NT_TokenKind kind);
+static inline bool NT_Parser_tag(NT_Parser *p, NT_TokenKind kind);
 
 /// Return true if we're at the start of a tag with kind in `end`.
-static inline bool NT_Parser_end_block(NT_Parser *self, NT_TokenMask end);
+static inline bool NT_Parser_end_block(NT_Parser *p, NT_TokenMask end);
 
 /// Node parsing methods.
-static NT_Node *NT_Parser_parse_text(NT_Parser *self, NT_Token *token);
-static NT_Node *NT_Parser_parse_output(NT_Parser *self);
-static NT_Node *NT_Parser_parse_tag(NT_Parser *self);
-static NT_Node *NT_Parser_parse_if_tag(NT_Parser *self);
-static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *self);
-static NT_Node *NT_Parser_parse_else_tag(NT_Parser *self);
-static NT_Node *NT_Parser_parse_for_tag(NT_Parser *self);
+static int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end);
+static NT_Node *NT_Parser_parse_text(NT_Parser *p, NT_Token *token);
+static NT_Node *NT_Parser_parse_output(NT_Parser *p);
+static NT_Node *NT_Parser_parse_tag(NT_Parser *p);
+static NT_Node *NT_Parser_parse_if_tag(NT_Parser *p);
+static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *p);
+static NT_Node *NT_Parser_parse_else_tag(NT_Parser *p);
+static NT_Node *NT_Parser_parse_for_tag(NT_Parser *p);
 
 // Expression parsing methods.
-static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec);
-static NT_Expr *NT_Parser_parse_group(NT_Parser *self);
-static NT_Expr *NT_Parser_parse_not(NT_Parser *self);
-static NT_Expr *NT_Parser_parse_infix(NT_Parser *self, NT_Expr *left);
-static NT_Expr *NT_Parser_parse_path(NT_Parser *self);
-static PyObject *NT_Parser_parse_identifier(NT_Parser *self);
-static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *self);
-static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *self);
+static NT_Expr *NT_Parser_parse_primary(NT_Parser *p, Precedence prec);
+static NT_Expr *NT_Parser_parse_group(NT_Parser *p);
+static NT_Expr *NT_Parser_parse_not(NT_Parser *p);
+static NT_Expr *NT_Parser_parse_infix(NT_Parser *p, NT_Expr *left);
+static NT_Expr *NT_Parser_parse_path(NT_Parser *p);
+static PyObject *NT_Parser_parse_identifier(NT_Parser *p);
+static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *p);
+static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p);
 
-static inline PyObject *NT_Token_text(NT_Token *self, PyObject *str);
+static inline PyObject *NT_Token_text(NT_Token *p, PyObject *str);
 static PyObject *trim(PyObject *value, NT_TokenKind left, NT_TokenKind right);
 
 // Bit masks for testing NT_TokenKind membership.
@@ -277,7 +278,7 @@ NT_Node *NT_Parser_parse_root(NT_Parser *p)
     return root;
 }
 
-int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end)
+static int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end)
 {
     for (;;)
     {
@@ -308,8 +309,8 @@ int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end)
             return 0;
 
         default:
-            parser_error(token, "unexpected '%s'",
-                         NT_TokenKind_str(token->kind));
+            nt_parser_error(token, "unexpected '%s'",
+                            NT_TokenKind_str(token->kind));
             return -1;
         }
 
@@ -320,99 +321,99 @@ int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end)
     }
 }
 
-static inline NT_Token *NT_Parser_next(NT_Parser *self)
+static inline NT_Token *NT_Parser_next(NT_Parser *p)
 {
-    if (self->pos >= self->token_count)
+    if (p->pos >= p->token_count)
     {
         // Last token is always EOF
-        return &self->tokens[self->token_count - 1];
+        return &p->tokens[p->token_count - 1];
     }
 
-    return &self->tokens[self->pos++];
+    return &p->tokens[p->pos++];
 }
 
-static inline NT_Token *NT_Parser_current(NT_Parser *self)
+static inline NT_Token *NT_Parser_current(NT_Parser *p)
 {
-    if (self->pos >= self->token_count)
+    if (p->pos >= p->token_count)
     {
-        return &self->tokens[self->token_count - 1];
+        return &p->tokens[p->token_count - 1];
     }
 
-    return &self->tokens[self->pos];
+    return &p->tokens[p->pos];
 }
 
-static inline NT_Token *NT_Parser_peek(NT_Parser *self)
+static inline NT_Token *NT_Parser_peek(NT_Parser *p)
 {
-    if (self->pos + 1 >= self->token_count)
-    {
-        // Last token is always EOF
-        return &self->tokens[self->token_count - 1];
-    }
-
-    return &self->tokens[self->pos + 1];
-}
-
-static inline NT_Token *NT_Parser_peek_n(NT_Parser *self, Py_ssize_t n)
-{
-    if (self->pos + n >= self->token_count)
+    if (p->pos + 1 >= p->token_count)
     {
         // Last token is always EOF
-        return &self->tokens[self->token_count - 1];
+        return &p->tokens[p->token_count - 1];
     }
 
-    return &self->tokens[self->pos + n];
+    return &p->tokens[p->pos + 1];
 }
 
-static inline NT_Token *NT_Parser_eat(NT_Parser *self, NT_TokenKind kind)
+static inline NT_Token *NT_Parser_peek_n(NT_Parser *p, Py_ssize_t n)
 {
-    NT_Token *token = NT_Parser_next(self);
+    if (p->pos + n >= p->token_count)
+    {
+        // Last token is always EOF
+        return &p->tokens[p->token_count - 1];
+    }
+
+    return &p->tokens[p->pos + n];
+}
+
+static inline NT_Token *NT_Parser_eat(NT_Parser *p, NT_TokenKind kind)
+{
+    NT_Token *token = NT_Parser_next(p);
     if (token->kind != kind)
     {
-        return parser_error(token, "expected %s, found %s",
-                            NT_TokenKind_str(kind),
-                            NT_TokenKind_str(token->kind));
+        return nt_parser_error(token, "expected %s, found %s",
+                               NT_TokenKind_str(kind),
+                               NT_TokenKind_str(token->kind));
     }
 
     return token;
 }
 
-static NT_Token *NT_Parser_eat_empty_tag(NT_Parser *self, NT_TokenKind kind)
+static NT_Token *NT_Parser_eat_empty_tag(NT_Parser *p, NT_TokenKind kind)
 {
-    if (!NT_Parser_eat(self, TOK_TAG_START))
+    if (!NT_Parser_eat(p, TOK_TAG_START))
     {
         return NULL;
     }
-    NT_Parser_skip_wc(self);
-    NT_Token *token = NT_Parser_eat(self, kind);
+    NT_Parser_skip_wc(p);
+    NT_Token *token = NT_Parser_eat(p, kind);
     if (!token)
     {
         return NULL;
     }
-    NT_Parser_carry_wc(self);
-    if (!NT_Parser_eat(self, TOK_TAG_END))
+    NT_Parser_carry_wc(p);
+    if (!NT_Parser_eat(p, TOK_TAG_END))
     {
         return NULL;
     }
     return token;
 }
 
-static inline int NT_Parser_expect_expression(NT_Parser *self)
+static inline int NT_Parser_expect_expression(NT_Parser *p)
 {
-    NT_Token *token = NT_Parser_current(self);
+    NT_Token *token = NT_Parser_current(p);
 
     if (NT_Token_mask_test(token->kind, TERMINATE_EXPR_MASK))
     {
-        parser_error(token, "expected an expression");
+        nt_parser_error(token, "expected an expression");
         return -1;
     }
 
     return 0;
 }
 
-static inline bool NT_Parser_tag(NT_Parser *self, NT_TokenKind kind)
+static inline bool NT_Parser_tag(NT_Parser *p, NT_TokenKind kind)
 {
     // Assumes we're at TOK_TAG_START.
-    NT_Token *token = NT_Parser_peek(self);
+    NT_Token *token = NT_Parser_peek(p);
 
     if (token->kind == kind)
     {
@@ -421,20 +422,20 @@ static inline bool NT_Parser_tag(NT_Parser *self, NT_TokenKind kind)
 
     if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        return NT_Parser_peek_n(self, 2)->kind == kind;
+        return NT_Parser_peek_n(p, 2)->kind == kind;
     }
 
     return false;
 }
 
-static inline bool NT_Parser_end_block(NT_Parser *self, NT_TokenMask end)
+static inline bool NT_Parser_end_block(NT_Parser *p, NT_TokenMask end)
 {
     // Assumes we're at TOK_TAG_START.
-    NT_Token *token = NT_Parser_peek(self);
+    NT_Token *token = NT_Parser_peek(p);
 
     if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        NT_Token *peeked = NT_Parser_peek_n(self, 2);
+        NT_Token *peeked = NT_Parser_peek_n(p, 2);
         if (NT_Token_mask_test(peeked->kind, end))
         {
             return true;
@@ -449,26 +450,26 @@ static inline bool NT_Parser_end_block(NT_Parser *self, NT_TokenMask end)
     return false;
 }
 
-static inline void NT_Parser_carry_wc(NT_Parser *self)
+static inline void NT_Parser_carry_wc(NT_Parser *p)
 {
-    NT_Token *token = NT_Parser_current(self);
+    NT_Token *token = NT_Parser_current(p);
     if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        self->whitespace_carry = token->kind;
-        self->pos++;
+        p->whitespace_carry = token->kind;
+        p->pos++;
     }
     else
     {
-        self->whitespace_carry = TOK_WC_NONE;
+        p->whitespace_carry = TOK_WC_NONE;
     }
 }
 
-static inline void NT_Parser_skip_wc(NT_Parser *self)
+static inline void NT_Parser_skip_wc(NT_Parser *p)
 {
-    NT_Token *token = NT_Parser_current(self);
+    NT_Token *token = NT_Parser_current(p);
     if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
     {
-        self->pos++;
+        p->pos++;
     }
 }
 
@@ -487,24 +488,24 @@ static inline Precedence precedence(NT_TokenKind kind)
     }
 }
 
-static NT_Node *NT_Parser_parse_text(NT_Parser *self, NT_Token *token)
+static NT_Node *NT_Parser_parse_text(NT_Parser *p, NT_Token *token)
 {
 
-    PyObject *str = NT_Token_text(token, self->str);
+    PyObject *str = NT_Token_text(token, p->str);
     if (!str)
     {
         return NULL;
     }
 
     NT_TokenKind wc_right = TOK_WC_NONE;
-    NT_Token *peeked = NT_Parser_peek(self);
+    NT_Token *peeked = NT_Parser_peek(p);
 
     if (NT_Token_mask_test(peeked->kind, WHITESPACE_CONTROL_MASK))
     {
         wc_right = peeked->kind;
     }
 
-    PyObject *trimmed = trim(str, self->whitespace_carry, wc_right);
+    PyObject *trimmed = trim(str, p->whitespace_carry, wc_right);
     Py_DECREF(str);
 
     if (!trimmed)
@@ -512,7 +513,7 @@ static NT_Node *NT_Parser_parse_text(NT_Parser *self, NT_Token *token)
         return NULL;
     }
 
-    NT_Node *node = NT_Parser_make_node(self, NODE_TEXT);
+    NT_Node *node = NT_Parser_make_node(p, NODE_TEXT);
     if (!node)
     {
         Py_DECREF(trimmed);
@@ -520,28 +521,28 @@ static NT_Node *NT_Parser_parse_text(NT_Parser *self, NT_Token *token)
     }
 
     node->str = trimmed;
-    NT_Mem_steal_ref(self->mem, trimmed);
+    NT_Mem_steal_ref(p->mem, trimmed);
     return node;
 }
 
-static NT_Node *NT_Parser_parse_output(NT_Parser *self)
+static NT_Node *NT_Parser_parse_output(NT_Parser *p)
 {
-    NT_Parser_skip_wc(self);
+    NT_Parser_skip_wc(p);
 
-    NT_Expr *expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    NT_Expr *expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         return NULL;
     }
 
-    NT_Parser_carry_wc(self);
+    NT_Parser_carry_wc(p);
 
-    if (!NT_Parser_eat(self, TOK_OUT_END))
+    if (!NT_Parser_eat(p, TOK_OUT_END))
     {
         return NULL;
     }
 
-    NT_Node *node = NT_Parser_make_node(self, NODE_OUPUT);
+    NT_Node *node = NT_Parser_make_node(p, NODE_OUPUT);
     if (!node)
     {
         return NULL;
@@ -551,48 +552,48 @@ static NT_Node *NT_Parser_parse_output(NT_Parser *self)
     return node;
 }
 
-static NT_Node *NT_Parser_parse_tag(NT_Parser *self)
+static NT_Node *NT_Parser_parse_tag(NT_Parser *p)
 {
-    NT_Parser_skip_wc(self);
-    NT_Token *token = NT_Parser_next(self);
+    NT_Parser_skip_wc(p);
+    NT_Token *token = NT_Parser_next(p);
 
     switch (token->kind)
     {
     case TOK_IF_TAG:
-        return NT_Parser_parse_if_tag(self);
+        return NT_Parser_parse_if_tag(p);
     case TOK_FOR_TAG:
-        return NT_Parser_parse_for_tag(self);
+        return NT_Parser_parse_for_tag(p);
     default:
-        return parser_error(token, "unexpected token '%s'",
-                            NT_TokenKind_str(token->kind));
+        return nt_parser_error(token, "unexpected token '%s'",
+                               NT_TokenKind_str(token->kind));
     }
 }
 
-static NT_Node *NT_Parser_parse_if_tag(NT_Parser *self)
+static NT_Node *NT_Parser_parse_if_tag(NT_Parser *p)
 {
     NT_Expr *expr = NULL;
     NT_Node *node = NULL;
     NT_Node *tag = NULL;
 
-    tag = NT_Parser_make_node(self, NODE_IF_TAG);
+    tag = NT_Parser_make_node(p, NODE_IF_TAG);
     if (!tag)
     {
         goto fail;
     }
 
-    node = NT_Parser_make_node(self, NODE_IF_BLOCK);
+    node = NT_Parser_make_node(p, NODE_IF_BLOCK);
     if (!node)
     {
         goto fail;
     }
 
     // Assumes TOK_IF_TAG and WC have already been consumed.
-    if (NT_Parser_expect_expression(self) < 0)
+    if (NT_Parser_expect_expression(p) < 0)
     {
         goto fail;
     }
 
-    expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         goto fail;
@@ -601,33 +602,33 @@ static NT_Node *NT_Parser_parse_if_tag(NT_Parser *self)
     node->expr = expr;
     expr = NULL;
 
-    NT_Parser_carry_wc(self);
-    if (!NT_Parser_eat(self, TOK_TAG_END))
+    NT_Parser_carry_wc(p);
+    if (!NT_Parser_eat(p, TOK_TAG_END))
     {
         goto fail;
     }
 
-    if (NT_Parser_parse(self, node, END_IF_MASK) < 0)
+    if (NT_Parser_parse(p, node, END_IF_MASK) < 0)
     {
         goto fail;
     }
 
-    if (NT_Parser_add_node(self, tag, node) < 0)
+    if (NT_Parser_add_node(p, tag, node) < 0)
     {
         goto fail;
     }
     node = NULL;
 
     // Zero or more elif blocks.
-    while (NT_Parser_tag(self, TOK_ELIF_TAG))
+    while (NT_Parser_tag(p, TOK_ELIF_TAG))
     {
-        node = NT_Parser_parse_elif_tag(self);
+        node = NT_Parser_parse_elif_tag(p);
         if (!node)
         {
             goto fail;
         }
 
-        if (NT_Parser_add_node(self, tag, node) < 0)
+        if (NT_Parser_add_node(p, tag, node) < 0)
         {
             goto fail;
         }
@@ -636,22 +637,22 @@ static NT_Node *NT_Parser_parse_if_tag(NT_Parser *self)
     }
 
     // Optional else block.
-    if (NT_Parser_tag(self, TOK_ELSE_TAG))
+    if (NT_Parser_tag(p, TOK_ELSE_TAG))
     {
-        node = NT_Parser_parse_else_tag(self);
+        node = NT_Parser_parse_else_tag(p);
         if (!node)
         {
             goto fail;
         }
 
-        if (NT_Parser_add_node(self, tag, node) < 0)
+        if (NT_Parser_add_node(p, tag, node) < 0)
         {
             goto fail;
         }
         node = NULL;
     }
 
-    if (!NT_Parser_eat_empty_tag(self, TOK_ENDIF_TAG))
+    if (!NT_Parser_eat_empty_tag(p, TOK_ENDIF_TAG))
     {
         goto fail;
     }
@@ -662,35 +663,35 @@ fail:
     return NULL;
 }
 
-static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *self)
+static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *p)
 {
     NT_Node *node = NULL;
     NT_Expr *expr = NULL;
 
-    node = NT_Parser_make_node(self, NODE_ELIF_BLOCK);
+    node = NT_Parser_make_node(p, NODE_ELIF_BLOCK);
     if (!node)
     {
         goto fail;
     }
 
-    if (!NT_Parser_eat(self, TOK_TAG_START))
+    if (!NT_Parser_eat(p, TOK_TAG_START))
     {
         goto fail;
     }
 
-    NT_Parser_skip_wc(self);
+    NT_Parser_skip_wc(p);
 
-    if (!NT_Parser_eat(self, TOK_ELIF_TAG))
+    if (!NT_Parser_eat(p, TOK_ELIF_TAG))
     {
         goto fail;
     }
 
-    if (NT_Parser_expect_expression(self) < 0)
+    if (NT_Parser_expect_expression(p) < 0)
     {
         goto fail;
     }
 
-    expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         goto fail;
@@ -699,14 +700,14 @@ static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *self)
     node->expr = expr;
     expr = NULL;
 
-    NT_Parser_carry_wc(self);
+    NT_Parser_carry_wc(p);
 
-    if (!NT_Parser_eat(self, TOK_TAG_END))
+    if (!NT_Parser_eat(p, TOK_TAG_END))
     {
         goto fail;
     }
 
-    if (NT_Parser_parse(self, node, END_IF_MASK) < 0)
+    if (NT_Parser_parse(p, node, END_IF_MASK) < 0)
     {
         goto fail;
     }
@@ -717,21 +718,21 @@ fail:
     return NULL;
 }
 
-static NT_Node *NT_Parser_parse_else_tag(NT_Parser *self)
+static NT_Node *NT_Parser_parse_else_tag(NT_Parser *p)
 {
-    NT_Node *node = NT_Parser_make_node(self, NODE_ELSE_BLOCK);
+    NT_Node *node = NT_Parser_make_node(p, NODE_ELSE_BLOCK);
 
     if (!node)
     {
         goto fail;
     }
 
-    if (!NT_Parser_eat_empty_tag(self, TOK_ELSE_TAG))
+    if (!NT_Parser_eat_empty_tag(p, TOK_ELSE_TAG))
     {
         goto fail;
     }
 
-    if (NT_Parser_parse(self, node, END_IF_MASK) < 0)
+    if (NT_Parser_parse(p, node, END_IF_MASK) < 0)
     {
         goto fail;
     }
@@ -742,46 +743,46 @@ fail:
     return NULL;
 }
 
-static NT_Node *NT_Parser_parse_for_tag(NT_Parser *self)
+static NT_Node *NT_Parser_parse_for_tag(NT_Parser *p)
 {
     PyObject *ident = NULL;
     NT_Expr *expr = NULL;
     NT_Node *node = NULL;
     NT_Node *tag = NULL;
 
-    tag = NT_Parser_make_node(self, NODE_FOR_TAG);
+    tag = NT_Parser_make_node(p, NODE_FOR_TAG);
     if (!tag)
     {
         return NULL;
     }
 
     // Assumes TOK_FOR_TAG and WC have already been consumed.
-    if (NT_Parser_expect_expression(self) < 0)
+    if (NT_Parser_expect_expression(p) < 0)
     {
         goto fail;
     }
 
-    ident = NT_Parser_parse_identifier(self);
+    ident = NT_Parser_parse_identifier(p);
     if (!ident)
     {
         goto fail;
     }
 
     tag->str = ident;
-    NT_Mem_steal_ref(self->mem, ident);
+    NT_Mem_steal_ref(p->mem, ident);
     ident = NULL;
 
-    if (!NT_Parser_eat(self, TOK_IN))
+    if (!NT_Parser_eat(p, TOK_IN))
     {
         goto fail;
     }
 
-    if (NT_Parser_expect_expression(self) < 0)
+    if (NT_Parser_expect_expression(p) < 0)
     {
         goto fail;
     }
 
-    expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         goto fail;
@@ -790,25 +791,25 @@ static NT_Node *NT_Parser_parse_for_tag(NT_Parser *self)
     tag->expr = expr;
     expr = NULL;
 
-    NT_Parser_carry_wc(self);
+    NT_Parser_carry_wc(p);
 
-    if (!NT_Parser_eat(self, TOK_TAG_END))
+    if (!NT_Parser_eat(p, TOK_TAG_END))
     {
         goto fail;
     }
 
-    node = NT_Parser_make_node(self, NODE_FOR_BLOCK);
+    node = NT_Parser_make_node(p, NODE_FOR_BLOCK);
     if (!node)
     {
         goto fail;
     }
 
-    if (NT_Parser_parse(self, node, END_FOR_MASK) < 0)
+    if (NT_Parser_parse(p, node, END_FOR_MASK) < 0)
     {
         goto fail;
     }
 
-    if (NT_Parser_add_node(self, tag, node) < 0)
+    if (NT_Parser_add_node(p, tag, node) < 0)
     {
         goto fail;
     }
@@ -816,32 +817,32 @@ static NT_Node *NT_Parser_parse_for_tag(NT_Parser *self)
     node = NULL;
 
     // Optional else block.
-    if (NT_Parser_tag(self, TOK_ELSE_TAG))
+    if (NT_Parser_tag(p, TOK_ELSE_TAG))
     {
-        node = NT_Parser_make_node(self, NODE_ELSE_BLOCK);
+        node = NT_Parser_make_node(p, NODE_ELSE_BLOCK);
         if (!node)
         {
             goto fail;
         }
 
-        if (!NT_Parser_eat_empty_tag(self, TOK_ELSE_TAG))
+        if (!NT_Parser_eat_empty_tag(p, TOK_ELSE_TAG))
         {
             goto fail;
         }
 
-        if (NT_Parser_parse(self, node, END_FOR_MASK) < 0)
+        if (NT_Parser_parse(p, node, END_FOR_MASK) < 0)
         {
             goto fail;
         }
 
-        if (NT_Parser_add_node(self, tag, node) < 0)
+        if (NT_Parser_add_node(p, tag, node) < 0)
         {
             goto fail;
         }
         node = NULL;
     }
 
-    if (!NT_Parser_eat_empty_tag(self, TOK_ENDFOR_TAG))
+    if (!NT_Parser_eat_empty_tag(p, TOK_ENDFOR_TAG))
     {
         goto fail;
     }
@@ -858,10 +859,10 @@ fail:
     return NULL;
 }
 
-static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
+static NT_Expr *NT_Parser_parse_primary(NT_Parser *p, Precedence prec)
 {
     NT_Expr *left = NULL;
-    NT_Token *token = NT_Parser_current(self);
+    NT_Token *token = NT_Parser_current(p);
     NT_TokenKind kind = token->kind;
     PyObject *str = NULL;
 
@@ -869,42 +870,42 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
     {
     case TOK_SINGLE_QUOTE_STRING:
     case TOK_DOUBLE_QUOTE_STRING:
-        left = NT_Parser_make_expr(self, EXPR_STR, NULL);
+        left = NT_Parser_make_expr(p, EXPR_STR, NULL);
         if (!left)
         {
             goto fail;
         }
 
-        str = NT_Token_text(token, self->str);
+        str = NT_Token_text(token, p->str);
         if (!str)
         {
             goto fail;
         }
 
-        if (NT_Parser_add_obj(self, left, str) < 0)
+        if (NT_Parser_add_obj(p, left, str) < 0)
         {
             goto fail;
         }
 
         Py_DECREF(str);
         str = NULL;
-        self->pos++;
+        p->pos++;
         break;
     case TOK_SINGLE_ESC_STRING:
     case TOK_DOUBLE_ESC_STRING:
-        left = NT_Parser_make_expr(self, EXPR_STR, NULL);
+        left = NT_Parser_make_expr(p, EXPR_STR, NULL);
         if (!left)
         {
             goto fail;
         }
 
-        str = unescape(token, self->str);
+        str = unescape(token, p->str);
         if (!str)
         {
             goto fail;
         }
 
-        if (NT_Parser_add_obj(self, left, str) < 0)
+        if (NT_Parser_add_obj(p, left, str) < 0)
         {
             Py_DECREF(str);
             goto fail;
@@ -912,20 +913,20 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
 
         Py_DECREF(str);
         str = NULL;
-        self->pos++;
+        p->pos++;
         break;
     case TOK_L_PAREN:
-        left = NT_Parser_parse_group(self);
+        left = NT_Parser_parse_group(p);
         break;
     case TOK_WORD:
     case TOK_L_BRACKET:
-        left = NT_Parser_parse_path(self);
+        left = NT_Parser_parse_path(p);
         break;
     case TOK_NOT:
-        left = NT_Parser_parse_not(self);
+        left = NT_Parser_parse_not(p);
         break;
     default:
-        parser_error(token, "unexpected %s", NT_TokenKind_str(token->kind));
+        nt_parser_error(token, "unexpected %s", NT_TokenKind_str(token->kind));
     }
 
     if (!left)
@@ -935,7 +936,7 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
 
     for (;;)
     {
-        token = NT_Parser_current(self);
+        token = NT_Parser_current(p);
         kind = token->kind;
 
         if (kind == TOK_EOF || !NT_Token_mask_test(kind, BIN_OP_MASK) ||
@@ -944,7 +945,7 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *self, Precedence prec)
             break;
         }
 
-        left = NT_Parser_parse_infix(self, left);
+        left = NT_Parser_parse_infix(p, left);
         if (!left)
         {
             goto fail;
@@ -958,20 +959,20 @@ fail:
     return NULL;
 }
 
-static NT_Expr *NT_Parser_parse_group(NT_Parser *self)
+static NT_Expr *NT_Parser_parse_group(NT_Parser *p)
 {
-    if (!NT_Parser_eat(self, TOK_L_PAREN))
+    if (!NT_Parser_eat(p, TOK_L_PAREN))
     {
         return NULL;
     }
 
-    NT_Expr *expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    NT_Expr *expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         return NULL;
     }
 
-    if (!NT_Parser_eat(self, TOK_R_PAREN))
+    if (!NT_Parser_eat(p, TOK_R_PAREN))
     {
         return NULL;
     }
@@ -979,31 +980,30 @@ static NT_Expr *NT_Parser_parse_group(NT_Parser *self)
     return expr;
 }
 
-static PyObject *NT_Parser_parse_identifier(NT_Parser *self)
+static PyObject *NT_Parser_parse_identifier(NT_Parser *p)
 {
-    NT_Token *token = NT_Parser_eat(self, TOK_WORD);
-    if (NT_Token_mask_test(NT_Parser_current(self)->kind,
-                           PATH_PUNCTUATION_MASK))
+    NT_Token *token = NT_Parser_eat(p, TOK_WORD);
+    if (NT_Token_mask_test(NT_Parser_current(p)->kind, PATH_PUNCTUATION_MASK))
     {
-        return parser_error(token, "expected an identifier, found a path");
+        return nt_parser_error(token, "expected an identifier, found a path");
     }
-    return NT_Token_text(token, self->str);
+    return NT_Token_text(token, p->str);
 }
 
-static NT_Expr *NT_Parser_parse_not(NT_Parser *self)
+static NT_Expr *NT_Parser_parse_not(NT_Parser *p)
 {
-    if (!NT_Parser_eat(self, TOK_NOT))
+    if (!NT_Parser_eat(p, TOK_NOT))
     {
         return NULL;
     }
 
-    NT_Expr *not_expr = NT_Parser_make_expr(self, EXPR_NOT, NULL);
+    NT_Expr *not_expr = NT_Parser_make_expr(p, EXPR_NOT, NULL);
     if (!not_expr)
     {
         return NULL;
     }
 
-    NT_Expr *expr = NT_Parser_parse_primary(self, PREC_LOWEST);
+    NT_Expr *expr = NT_Parser_parse_primary(p, PREC_LOWEST);
     if (!expr)
     {
         return NULL;
@@ -1013,12 +1013,12 @@ static NT_Expr *NT_Parser_parse_not(NT_Parser *self)
     return not_expr;
 }
 
-static NT_Expr *NT_Parser_parse_infix(NT_Parser *self, NT_Expr *left)
+static NT_Expr *NT_Parser_parse_infix(NT_Parser *p, NT_Expr *left)
 {
-    NT_Token *token = NT_Parser_next(self);
+    NT_Token *token = NT_Parser_next(p);
     NT_TokenKind kind = token->kind;
     Precedence prec = precedence(kind);
-    NT_Expr *right = NT_Parser_parse_primary(self, prec);
+    NT_Expr *right = NT_Parser_parse_primary(p, prec);
     NT_Expr *infix_expr = NULL;
 
     if (!right)
@@ -1029,14 +1029,14 @@ static NT_Expr *NT_Parser_parse_infix(NT_Parser *self, NT_Expr *left)
     switch (kind)
     {
     case TOK_AND:
-        infix_expr = NT_Parser_make_expr(self, EXPR_AND, NULL);
+        infix_expr = NT_Parser_make_expr(p, EXPR_AND, NULL);
         break;
     case TOK_OR:
-        infix_expr = NT_Parser_make_expr(self, EXPR_OR, NULL);
+        infix_expr = NT_Parser_make_expr(p, EXPR_OR, NULL);
         break;
     default:
-        parser_error(token, "unexpected operator '%s'",
-                     NT_TokenKind_str(kind));
+        nt_parser_error(token, "unexpected operator '%s'",
+                        NT_TokenKind_str(kind));
     };
 
     if (!infix_expr)
@@ -1049,9 +1049,9 @@ static NT_Expr *NT_Parser_parse_infix(NT_Parser *self, NT_Expr *left)
     return infix_expr;
 }
 
-static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
+static NT_Expr *NT_Parser_parse_path(NT_Parser *p)
 {
-    NT_Token *token = NT_Parser_current(self);
+    NT_Token *token = NT_Parser_current(p);
     NT_TokenKind kind = token->kind;
     PyObject *obj = NULL;
     NT_Expr *expr = NULL;
@@ -1063,7 +1063,7 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
         return NULL;
     }
 
-    expr = NT_Parser_make_expr(self, EXPR_VAR, token_copy);
+    expr = NT_Parser_make_expr(p, EXPR_VAR, token_copy);
     if (!expr)
     {
         PyMem_Free(token_copy);
@@ -1072,14 +1072,14 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
 
     if (kind == TOK_WORD)
     {
-        self->pos++;
-        PyObject *str = NT_Token_text(token, self->str);
+        p->pos++;
+        PyObject *str = NT_Token_text(token, p->str);
         if (!str)
         {
             goto cleanup;
         }
 
-        if (NT_Parser_add_obj(self, expr, str) == -1)
+        if (NT_Parser_add_obj(p, expr, str) == -1)
         {
             Py_DECREF(str);
             goto cleanup;
@@ -1089,17 +1089,17 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
 
     for (;;)
     {
-        kind = NT_Parser_next(self)->kind;
+        kind = NT_Parser_next(p)->kind;
         switch (kind)
         {
         case TOK_L_BRACKET:
-            obj = NT_Parser_parse_bracketed_path_segment(self);
+            obj = NT_Parser_parse_bracketed_path_segment(p);
             break;
         case TOK_DOT:
-            obj = NT_Parser_parse_shorthand_path_selector(self);
+            obj = NT_Parser_parse_shorthand_path_selector(p);
             break;
         default:
-            self->pos--;
+            p->pos--;
             result = expr;
             goto cleanup;
         }
@@ -1109,7 +1109,7 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *self)
             goto cleanup;
         }
 
-        if (NT_Parser_add_obj(self, expr, obj) == -1)
+        if (NT_Parser_add_obj(p, expr, obj) == -1)
         {
             goto cleanup;
         }
@@ -1120,29 +1120,30 @@ cleanup:
     return result;
 }
 
-static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *self)
+static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *p)
 {
     PyObject *segment = NULL;
-    NT_Token *token = NT_Parser_next(self);
+    NT_Token *token = NT_Parser_next(p);
 
     switch (token->kind)
     {
     case TOK_INT:
-        segment = PyNumber_Long(NT_Token_text(token, self->str));
+        segment = PyNumber_Long(NT_Token_text(token, p->str));
         break;
     case TOK_DOUBLE_QUOTE_STRING:
     case TOK_SINGLE_QUOTE_STRING:
-        segment = NT_Token_text(token, self->str);
+        segment = NT_Token_text(token, p->str);
         break;
     case TOK_DOUBLE_ESC_STRING:
     case TOK_SINGLE_ESC_STRING:
-        segment = unescape(token, self->str);
+        segment = unescape(token, p->str);
         break;
     case TOK_R_BRACKET:
-        parser_error(token, "empty bracketed segment");
+        nt_parser_error(token, "empty bracketed segment");
         break;
     default:
-        parser_error(token, "unexpected '%s'", NT_TokenKind_str(token->kind));
+        nt_parser_error(token, "unexpected '%s'",
+                        NT_TokenKind_str(token->kind));
         break;
     }
 
@@ -1151,7 +1152,7 @@ static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *self)
         return NULL;
     }
 
-    if (!NT_Parser_eat(self, TOK_R_BRACKET))
+    if (!NT_Parser_eat(p, TOK_R_BRACKET))
     {
         return NULL;
     }
@@ -1159,24 +1160,25 @@ static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *self)
     return segment;
 }
 
-static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *self)
+static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p)
 {
     PyObject *segment = NULL;
-    NT_Token *token = NT_Parser_next(self);
+    NT_Token *token = NT_Parser_next(p);
 
     switch (token->kind)
     {
     case TOK_INT:
-        segment = PyNumber_Long(NT_Token_text(token, self->str));
+        segment = PyNumber_Long(NT_Token_text(token, p->str));
         break;
     case TOK_WORD:
     case TOK_AND:
     case TOK_OR:
     case TOK_NOT:
-        segment = NT_Token_text(token, self->str);
+        segment = NT_Token_text(token, p->str);
         break;
     default:
-        parser_error(token, "unexpected '%s'", NT_TokenKind_str(token->kind));
+        nt_parser_error(token, "unexpected '%s'",
+                        NT_TokenKind_str(token->kind));
         break;
     }
 
@@ -1188,9 +1190,9 @@ static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *self)
     return segment;
 }
 
-static inline PyObject *NT_Token_text(NT_Token *self, PyObject *str)
+static inline PyObject *NT_Token_text(NT_Token *p, PyObject *str)
 {
-    return PyUnicode_Substring(str, self->start, self->end);
+    return PyUnicode_Substring(str, p->start, p->end);
 }
 
 // TODO: refactor

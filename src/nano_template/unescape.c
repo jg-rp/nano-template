@@ -127,7 +127,7 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
     (*pos)++; // Move past `\`
     if (*pos >= length)
     {
-        parser_error(token, "invalid escape sequence");
+        nt_parser_error(token, "invalid escape sequence");
         return NULL;
     }
 
@@ -144,14 +144,14 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
     case '"':
         if (token->kind == TOK_SINGLE_ESC_STRING)
         {
-            parser_error(token, "invalid '\\\"' escape sequence");
+            nt_parser_error(token, "invalid '\\\"' escape sequence");
             return NULL;
         }
         return PyUnicode_FromOrdinal('"');
     case '\'':
         if (token->kind == TOK_DOUBLE_ESC_STRING)
         {
-            parser_error(token, "invalid '\\'' escape sequence");
+            nt_parser_error(token, "invalid '\\'' escape sequence");
             return NULL;
         }
         return PyUnicode_FromOrdinal('\'');
@@ -172,7 +172,7 @@ static PyObject *decode_escape(PyObject *str, Py_ssize_t *pos,
     case 'u':
         return decode_unicode_escape(str, pos, length, token);
     default:
-        parser_error(token, "unknown escape sequence '\\%c'", ch);
+        nt_parser_error(token, "unknown escape sequence '\\%c'", ch);
         return NULL;
     }
 }
@@ -182,7 +182,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
 {
     if (*pos + 3 >= length)
     {
-        parser_error(token, "incomplete escape sequence");
+        nt_parser_error(token, "incomplete escape sequence");
         return NULL;
     }
 
@@ -194,7 +194,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
 
     if (is_low_surrogate(code_point))
     {
-        parser_error(token, "unexpected low surrogate");
+        nt_parser_error(token, "unexpected low surrogate");
         return NULL;
     }
 
@@ -203,7 +203,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
         // Expect `\uXXXX`
         if (*pos + 5 >= length)
         {
-            parser_error(token, "incomplete escape sequence");
+            nt_parser_error(token, "incomplete escape sequence");
             return NULL;
         }
 
@@ -212,7 +212,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
 
         if (slash != '\\' || u != 'u')
         {
-            parser_error(token, "expected low surrogate");
+            nt_parser_error(token, "expected low surrogate");
             return NULL;
         }
 
@@ -226,7 +226,7 @@ static PyObject *decode_unicode_escape(PyObject *str, Py_ssize_t *pos,
 
         if (!is_low_surrogate(low_surrogate))
         {
-            parser_error(token, "expected low surrogate");
+            nt_parser_error(token, "expected low surrogate");
             return NULL;
         }
 
@@ -293,8 +293,8 @@ static inline int code_point_from_digits(PyObject *str, Py_ssize_t *pos,
             code_point |= (digit - 'A' + 10);
             break;
         default:
-            parser_error(token, "invalid hex digit `%c` in escape sequence",
-                         digit);
+            nt_parser_error(token, "invalid hex digit `%c` in escape sequence",
+                            digit);
             return -1;
         }
 

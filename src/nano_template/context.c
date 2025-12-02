@@ -2,10 +2,11 @@
 
 #include "nano_template/context.h"
 
-NT_Context *NT_Context_new(PyObject *str, PyObject *globals,
-                           PyObject *serializer, PyObject *undefined)
+NT_RenderContext *NT_RenderContext_new(PyObject *str, PyObject *globals,
+                                       PyObject *serializer,
+                                       PyObject *undefined)
 {
-    NT_Context *ctx = PyMem_Malloc(sizeof(NT_Context));
+    NT_RenderContext *ctx = PyMem_Malloc(sizeof(NT_RenderContext));
     if (!ctx)
     {
         PyErr_NoMemory();
@@ -22,33 +23,33 @@ NT_Context *NT_Context_new(PyObject *str, PyObject *globals,
     ctx->capacity = 0;
     ctx->serializer = serializer;
     ctx->undefined = undefined;
-    NT_Context_push(ctx, globals);
+    NT_RenderContext_push(ctx, globals);
 
     return ctx;
 }
 
-void NT_Context_free(NT_Context *self)
+void NT_RenderContext_free(NT_RenderContext *ctx)
 {
-    Py_XDECREF(self->str);
+    Py_XDECREF(ctx->str);
 
-    for (Py_ssize_t i = 0; i < self->size; i++)
+    for (Py_ssize_t i = 0; i < ctx->size; i++)
     {
-        Py_XDECREF(self->scope[i]);
+        Py_XDECREF(ctx->scope[i]);
     }
 
-    PyMem_Free(self->scope);
-    Py_XDECREF(self->serializer);
-    Py_XDECREF(self->undefined);
-    PyMem_Free(self);
+    PyMem_Free(ctx->scope);
+    Py_XDECREF(ctx->serializer);
+    Py_XDECREF(ctx->undefined);
+    PyMem_Free(ctx);
 }
 
-int NT_Context_get(NT_Context *self, PyObject *key, PyObject **out)
+int NT_RenderContext_get(NT_RenderContext *ctx, PyObject *key, PyObject **out)
 {
     PyObject *obj = NULL;
 
-    for (Py_ssize_t i = self->size - 1; i >= 0; i--)
+    for (Py_ssize_t i = ctx->size - 1; i >= 0; i--)
     {
-        obj = PyObject_GetItem(self->scope[i], key);
+        obj = PyObject_GetItem(ctx->scope[i], key);
         if (obj)
         {
             *out = obj;
@@ -60,32 +61,32 @@ int NT_Context_get(NT_Context *self, PyObject *key, PyObject **out)
     return -1;
 }
 
-int NT_Context_push(NT_Context *self, PyObject *namespace)
+int NT_RenderContext_push(NT_RenderContext *ctx, PyObject *namespace)
 {
-    if (self->size >= self->capacity)
+    if (ctx->size >= ctx->capacity)
     {
-        Py_ssize_t new_cap = (self->capacity == 0) ? 4 : (self->capacity * 2);
+        Py_ssize_t new_cap = (ctx->capacity == 0) ? 4 : (ctx->capacity * 2);
         PyObject **new_items =
-            PyMem_Realloc(self->scope, sizeof(PyObject *) * new_cap);
+            PyMem_Realloc(ctx->scope, sizeof(PyObject *) * new_cap);
         if (!new_items)
         {
             PyErr_NoMemory();
             return -1;
         }
 
-        self->scope = new_items;
-        self->capacity = new_cap;
+        ctx->scope = new_items;
+        ctx->capacity = new_cap;
     }
 
     Py_INCREF(namespace);
-    self->scope[self->size++] = namespace;
+    ctx->scope[ctx->size++] = namespace;
     return 0;
 }
 
-void NT_Context_pop(NT_Context *self)
+void NT_RenderContext_pop(NT_RenderContext *ctx)
 {
-    if (self->size > 0)
+    if (ctx->size > 0)
     {
-        Py_DECREF(self->scope[--self->size]);
+        Py_DECREF(ctx->scope[--ctx->size]);
     }
 }

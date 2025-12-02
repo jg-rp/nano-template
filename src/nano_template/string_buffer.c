@@ -7,14 +7,14 @@ PyObject *StringBuffer_new()
     return PyList_New(0);
 }
 
-int StringBuffer_append(PyObject *self, PyObject *str)
+int StringBuffer_append(PyObject *sb, PyObject *str)
 {
-    return PyList_Append(self, str);
+    return PyList_Append(sb, str);
 }
 
-PyObject *StringBuffer_finish(PyObject *self)
+PyObject *StringBuffer_finish(PyObject *sb)
 {
-    if (!self)
+    if (!sb)
     {
         return NULL;
     }
@@ -22,13 +22,13 @@ PyObject *StringBuffer_finish(PyObject *self)
     PyObject *empty = PyUnicode_FromString("");
     if (!empty)
     {
-        Py_DECREF(self);
+        Py_DECREF(sb);
         return NULL;
     }
 
-    PyObject *result = PyUnicode_Join(empty, self);
+    PyObject *result = PyUnicode_Join(empty, sb);
 
     Py_DECREF(empty);
-    Py_DECREF(self);
+    Py_DECREF(sb);
     return result;
 }

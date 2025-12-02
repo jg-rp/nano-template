@@ -99,7 +99,7 @@ static PyObject *NT_Parser_parse_identifier(NT_Parser *p);
 static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *p);
 static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p);
 
-static inline PyObject *NT_Token_text(NT_Token *p, PyObject *str);
+static inline PyObject *NT_Token_text(NT_Token *token, PyObject *str);
 static PyObject *trim(PyObject *value, NT_TokenKind left, NT_TokenKind right);
 
 // Bit masks for testing NT_TokenKind membership.
@@ -1182,17 +1182,13 @@ static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p)
         break;
     }
 
-    if (!segment)
-    {
-        return NULL;
-    }
-
     return segment;
 }
 
-static inline PyObject *NT_Token_text(NT_Token *p, PyObject *str)
+/// Return a new string. The text in str between token `start` and `end`.
+static inline PyObject *NT_Token_text(NT_Token *token, PyObject *str)
 {
-    return PyUnicode_Substring(str, p->start, p->end);
+    return PyUnicode_Substring(str, token->start, token->end);
 }
 
 // TODO: refactor

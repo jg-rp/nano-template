@@ -1,10 +1,18 @@
-from nano_template import StrictUndefined
-from nano_template import parse
-from nano_template import render
+from typing import Iterator
+import nano_template as nt
 
-t = parse("{{ foo.nosuchthing }}", undefined=StrictUndefined)
-print(t.render({"foo": {}}))
 
-# print(render(source, data))
+class MyUndefined(nt.Undefined):
+    def __str__(self) -> str:
+        return "<MISSING>"
 
-# TODO: setup ruff
+    def __bool__(self) -> bool:
+        return False
+
+    def __iter__(self) -> Iterator[object]:
+        yield from ()
+
+
+t = nt.parse("{{ foo.nosuchthing }}", undefined=MyUndefined)
+
+print(t.render({"foo": {}}))  # <MISSING>

@@ -31,11 +31,14 @@ Unlike those popular template engines, Nano Template forces you to keep applicat
 > In Nano templates, there are no filters or tests, no relational or membership operators, and we don't have for loop helpers or `{% break %}` and `{% continue %}`.
 >
 > Instead, you should process your data in Python before rendering a template, or use Minijinja.
+>
+> Available tags are `{% if %}`, `{% elif %}`, `{% else %}` and `{% for %}`.
 
 ### Variables
 
 ```liquid
 <div>{{ some.variable }}</div>
+<p>{{ other["variable with spaces or special characters"] }}</p>
 ```
 
 ### Conditions
@@ -74,6 +77,20 @@ Logical `and` and `or` have _last value_ semantics.
 
 ```liquid
 Hello, {{ user.name or "guest" }}!
+```
+
+### Strings
+
+String literals and quoted variable path segments can use single or double quotes, and allow JSON-style escape sequences.
+
+```liquid
+{{ greeting or "Hi \uD83D\uDE00!" }}
+```
+
+**Output:**
+
+```
+Hi 😀!
 ```
 
 ### Whitespace control

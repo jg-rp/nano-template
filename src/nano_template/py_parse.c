@@ -109,6 +109,8 @@ cleanup:
     {
         NT_Mem_free(ast);
         ast = NULL;
+        // `root` is allocated and freed by `ast`
+        root = NULL;
     }
 
     return template;

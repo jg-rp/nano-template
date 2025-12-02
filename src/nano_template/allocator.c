@@ -9,7 +9,7 @@ static NT_MemBlock *NT_Mem_new_block(NT_MemBlock *prev, size_t capacity);
 static uintptr_t align_forward(uintptr_t ptr, size_t align);
 
 /// @brief Reallocate objs.
-static int NT_Mem_grow_refs(NT_Mem *self);
+static int NT_Mem_grow_refs(NT_Mem *mem);
 
 NT_Mem *NT_Mem_new(void)
 {
@@ -29,7 +29,7 @@ NT_Mem *NT_Mem_new(void)
     return mem;
 }
 
-int NT_Mem_init(NT_Mem *self)
+int NT_Mem_init(NT_Mem *mem)
 {
     NT_MemBlock *block = NT_Mem_new_block(NULL, DEFAULT_BLOCK_SIZE);
     if (!block)
@@ -37,91 +37,91 @@ int NT_Mem_init(NT_Mem *self)
         return -1;
     }
 
-    self->head = block;
-    self->objs = NULL;
-    self->obj_count = 0;
-    self->obj_capacity = 0;
+    mem->head = block;
+    mem->objs = NULL;
+    mem->obj_count = 0;
+    mem->obj_capacity = 0;
     return 0;
 }
 
-void *NT_Mem_alloc(NT_Mem *self, size_t size)
+void *NT_Mem_alloc(NT_Mem *mem, size_t size)
 {
-    uintptr_t current_ptr = self->head->data + self->head->used;
+    uintptr_t current_ptr = mem->head->data + mem->head->used;
     uintptr_t aligned_ptr = align_forward(current_ptr, sizeof(void *));
     size_t required = size + aligned_ptr - current_ptr;
 
-    if (self->head->used + required > self->head->capacity)
+    if (mem->head->used + required > mem->head->capacity)
     {
         size_t new_cap =
             (size > DEFAULT_BLOCK_SIZE) ? size : DEFAULT_BLOCK_SIZE;
 
-        NT_MemBlock *new_block = NT_Mem_new_block(self->head, new_cap);
+        NT_MemBlock *new_block = NT_Mem_new_block(mem->head, new_cap);
         if (!new_block)
         {
             return NULL;
         }
 
-        self->head = new_block;
-        current_ptr = self->head->data;
+        mem->head = new_block;
+        current_ptr = mem->head->data;
         aligned_ptr = align_forward(current_ptr, sizeof(void *));
     }
 
-    uintptr_t padding = aligned_ptr - (self->head->data + self->head->used);
-    self->head->used += size + padding;
+    uintptr_t padding = aligned_ptr - (mem->head->data + mem->head->used);
+    mem->head->used += size + padding;
     // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return (void *)aligned_ptr;
 }
 
-int NT_Mem_ref(NT_Mem *self, PyObject *obj)
+int NT_Mem_ref(NT_Mem *mem, PyObject *obj)
 {
-    if (self->obj_count >= self->obj_capacity)
+    if (mem->obj_count >= mem->obj_capacity)
     {
-        if (NT_Mem_grow_refs(self) < 0)
+        if (NT_Mem_grow_refs(mem) < 0)
         {
             return -1;
         }
     }
 
     Py_INCREF(obj);
-    self->objs[self->obj_count++] = obj;
+    mem->objs[mem->obj_count++] = obj;
     return 0;
 }
 
-int NT_Mem_steal_ref(NT_Mem *self, PyObject *obj)
+int NT_Mem_steal_ref(NT_Mem *mem, PyObject *obj)
 {
-    if (self->obj_count >= self->obj_capacity)
+    if (mem->obj_count >= mem->obj_capacity)
     {
-        if (NT_Mem_grow_refs(self) < 0)
+        if (NT_Mem_grow_refs(mem) < 0)
         {
             return -1;
         }
     }
 
-    self->objs[self->obj_count++] = obj;
+    mem->objs[mem->obj_count++] = obj;
     return 0;
 }
 
-void NT_Mem_free(NT_Mem *self)
+void NT_Mem_free(NT_Mem *mem)
 {
-    if (!self)
+    if (!mem)
     {
         return;
     }
 
-    if (self->objs)
+    if (mem->objs)
     {
-        for (size_t i = 0; i < self->obj_count; i++)
+        for (size_t i = 0; i < mem->obj_count; i++)
         {
-            Py_XDECREF(self->objs[i]);
+            Py_XDECREF(mem->objs[i]);
         }
 
-        PyMem_Free(self->objs);
-        self->objs = NULL;
-        self->obj_count = 0;
-        self->obj_capacity = 0;
+        PyMem_Free(mem->objs);
+        mem->objs = NULL;
+        mem->obj_count = 0;
+        mem->obj_capacity = 0;
     }
 
-    NT_MemBlock *block = self->head;
+    NT_MemBlock *block = mem->head;
     while (block)
     {
         NT_MemBlock *prev = block->prev;
@@ -129,23 +129,23 @@ void NT_Mem_free(NT_Mem *self)
         block = prev;
     }
 
-    self->head = NULL;
-    PyMem_Free(self);
+    mem->head = NULL;
+    PyMem_Free(mem);
 }
 
-static int NT_Mem_grow_refs(NT_Mem *self)
+static int NT_Mem_grow_refs(NT_Mem *mem)
 {
     // NOLINTNEXTLINE(readability-magic-numbers)
-    size_t new_cap = (self->obj_capacity < 8) ? 8 : self->obj_capacity * 2;
+    size_t new_cap = (mem->obj_capacity < 8) ? 8 : mem->obj_capacity * 2;
     PyObject **new_objs = NULL;
 
-    if (!self->objs)
+    if (!mem->objs)
     {
         new_objs = PyMem_Malloc(sizeof(PyObject *) * new_cap);
     }
     else
     {
-        new_objs = PyMem_Realloc(self->objs, sizeof(PyObject *) * new_cap);
+        new_objs = PyMem_Realloc(mem->objs, sizeof(PyObject *) * new_cap);
     }
 
     if (!new_objs)
@@ -154,8 +154,8 @@ static int NT_Mem_grow_refs(NT_Mem *self)
         return -1;
     }
 
-    self->objs = new_objs;
-    self->obj_capacity = new_cap;
+    mem->objs = new_objs;
+    mem->obj_capacity = new_cap;
     return 0;
 }
 

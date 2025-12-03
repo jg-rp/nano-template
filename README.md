@@ -4,11 +4,7 @@ Minimal, fast, non-evaluating text templates for Python.
 
 ## Install
 
-Use [pip](https://docs.python.org/3/installing/index.html), or your favorite package manager:
-
-```console
-python -m pip install nano-template
-```
+TODO:
 
 ## Example
 

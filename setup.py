@@ -1,4 +1,5 @@
 import sys
+import sysconfig
 from pathlib import Path
 from setuptools import Extension
 from setuptools import setup
@@ -52,7 +53,7 @@ ext_modules = [
         ],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        py_limited_api=True,
+        py_limited_api=not sysconfig.get_config_var("Py_GIL_DISABLED"),
     )
 ]
 

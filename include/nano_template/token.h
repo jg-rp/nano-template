@@ -3,8 +3,10 @@
 #ifndef NT_SPAN_H
 #define NT_SPAN_H
 
+#include "nano_template/allocator.h"
 #include "nano_template/common.h"
 
+// NOTE: Enum item order must match those in py/nano_template/_token_kind.py.
 typedef enum
 {
     TOK_WC_NONE = 1,
@@ -41,6 +43,7 @@ typedef enum
     TOK_EOF,
 } NT_TokenKind;
 
+// TODO: Make these names pretty? They are used in parser exception messages.
 static const char *NT_TokenKind_names[] = {
     [TOK_WC_NONE] = "TOK_WC_NONE",
     [TOK_WC_HYPHEN] = "TOK_WC_HYPHEN",
@@ -74,6 +77,7 @@ static const char *NT_TokenKind_names[] = {
     [TOK_ERROR] = "TOK_ERROR",
     [TOK_EOF] = "TOK_EOF"};
 
+/// @brief Return a string representation of `kind`.
 static inline const char *NT_TokenKind_str(NT_TokenKind kind)
 {
     if (kind >= TOK_WC_HYPHEN && kind <= TOK_EOF)
@@ -83,6 +87,7 @@ static inline const char *NT_TokenKind_str(NT_TokenKind kind)
     return "TOK_UNKNOWN";
 }
 
+/// @brief A start and end index into a Python string.
 typedef struct NT_Token
 {
     Py_ssize_t start;
@@ -97,26 +102,21 @@ static inline NT_Token NT_Token_make(Py_ssize_t start, Py_ssize_t end,
     return token;
 }
 
-typedef Py_ssize_t NT_TokenMask;
-
-static inline bool NT_Token_mask_test(NT_TokenKind kind, NT_TokenMask mask)
+/// @brief Make a copy of `token`.
+/// @return A pointer to the copy token owned by `mem`, or NULL of failure with
+/// an exception set.
+static inline NT_Token *NT_Token_copy(NT_Mem *mem, const NT_Token *token)
 {
-    return (mask & ((Py_ssize_t)1 << kind)) != 0;
-}
-
-static inline NT_Token *NT_Token_copy(const NT_Token *self)
-{
-    NT_Token *token = (NT_Token *)PyMem_Malloc(sizeof(NT_Token));
-    if (!token)
+    NT_Token *new_token = NT_Mem_alloc(mem, sizeof(NT_Token));
+    if (!new_token)
     {
-        PyErr_NoMemory();
         return NULL;
     }
 
-    token->start = self->start;
-    token->end = self->end;
-    token->kind = self->kind;
-    return token;
+    new_token->start = token->start;
+    new_token->end = token->end;
+    new_token->kind = token->kind;
+    return new_token;
 }
 
 #endif

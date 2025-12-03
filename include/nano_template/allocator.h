@@ -35,7 +35,8 @@ NT_Mem *NT_Mem_new(void);
 int NT_Mem_init(NT_Mem *mem);
 
 /// @brief Allocate `size` bytes.
-/// @return A pointer to the start of the allocated bytes, or NULL on failure.
+/// @return A pointer to the start of the allocated bytes, or NULL on failure
+/// with an exception set.
 void *NT_Mem_alloc(NT_Mem *mem, size_t size);
 
 /// @brief Register `obj` as a new reference.

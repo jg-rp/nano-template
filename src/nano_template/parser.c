@@ -13,6 +13,27 @@ typedef enum
     PREC_PRE
 } Precedence;
 
+// Bit mask for testing NT_TokenKind membership.
+typedef size_t NT_TokenMask;
+
+static const NT_TokenMask END_IF_MASK = ((size_t)1 << TOK_ELSE_TAG) |
+                                        ((size_t)1 << TOK_ELIF_TAG) |
+                                        ((size_t)1 << TOK_ENDIF_TAG);
+
+static const NT_TokenMask END_FOR_MASK =
+    ((size_t)1 << TOK_ELSE_TAG) | ((size_t)1 << TOK_ENDFOR_TAG);
+
+static const NT_TokenMask WHITESPACE_CONTROL_MASK =
+    ((size_t)1 << TOK_WC_HYPHEN) | ((size_t)1 << TOK_WC_TILDE);
+
+static const NT_TokenMask BIN_OP_MASK =
+    ((size_t)1 << TOK_AND) | ((size_t)1 << TOK_OR);
+
+static const NT_TokenMask TERMINATE_EXPR_MASK =
+    ((size_t)1 << TOK_WC_HYPHEN) | ((size_t)1 << TOK_WC_TILDE) |
+    ((size_t)1 << TOK_OUT_END) | ((size_t)1 << TOK_TAG_END) |
+    ((size_t)1 << TOK_OTHER) | ((size_t)1 << TOK_EOF);
+
 /// @brief Allocate and initialize a new node in parser p's arena.
 /// @return A pointer to the new node, or NULL on error.
 static NT_Node *NT_Parser_make_node(NT_Parser *p, NT_NodeKind kind);
@@ -76,7 +97,6 @@ static inline bool NT_Parser_tag(NT_Parser *p, NT_TokenKind kind);
 /// Return true if we're at the start of a tag with kind in `end`.
 static inline bool NT_Parser_end_block(NT_Parser *p, NT_TokenMask end);
 
-/// Node parsing methods.
 static int NT_Parser_parse(NT_Parser *p, NT_Node *out_node, NT_TokenMask end);
 static NT_Node *NT_Parser_parse_text(NT_Parser *p, NT_Token *token);
 static NT_Node *NT_Parser_parse_output(NT_Parser *p);
@@ -86,7 +106,6 @@ static NT_Node *NT_Parser_parse_elif_tag(NT_Parser *p);
 static NT_Node *NT_Parser_parse_else_tag(NT_Parser *p);
 static NT_Node *NT_Parser_parse_for_tag(NT_Parser *p);
 
-// Expression parsing methods.
 static NT_Expr *NT_Parser_parse_primary(NT_Parser *p, Precedence prec);
 static NT_Expr *NT_Parser_parse_group(NT_Parser *p);
 static NT_Expr *NT_Parser_parse_not(NT_Parser *p);
@@ -96,30 +115,21 @@ static PyObject *NT_Parser_parse_identifier(NT_Parser *p);
 static PyObject *NT_Parser_parse_bracketed_path_segment(NT_Parser *p);
 static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p);
 
+/// Return a new string. The text in str between token `start` and `end`.
 static inline PyObject *NT_Token_text(NT_Token *token, PyObject *str);
+
+/// Return Python string `value` stripped of whitespace according to whitespace
+/// control tokens `left` and `right`.
 static PyObject *trim(PyObject *value, NT_TokenKind left, NT_TokenKind right);
 
-// Bit masks for testing NT_TokenKind membership.
-static const NT_TokenMask END_IF_MASK = ((Py_ssize_t)1 << TOK_ELSE_TAG) |
-                                        ((Py_ssize_t)1 << TOK_ELIF_TAG) |
-                                        ((Py_ssize_t)1 << TOK_ENDIF_TAG);
-
-static const NT_TokenMask END_FOR_MASK =
-    ((Py_ssize_t)1 << TOK_ELSE_TAG) | ((Py_ssize_t)1 << TOK_ENDFOR_TAG);
-
-static const NT_TokenMask WHITESPACE_CONTROL_MASK =
-    ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE);
-
-static const NT_TokenMask BIN_OP_MASK =
-    ((Py_ssize_t)1 << TOK_AND) | ((Py_ssize_t)1 << TOK_OR);
-
-static const NT_TokenMask TERMINATE_EXPR_MASK =
-    ((Py_ssize_t)1 << TOK_WC_HYPHEN) | ((Py_ssize_t)1 << TOK_WC_TILDE) |
-    ((Py_ssize_t)1 << TOK_OUT_END) | ((Py_ssize_t)1 << TOK_TAG_END) |
-    ((Py_ssize_t)1 << TOK_OTHER) | ((Py_ssize_t)1 << TOK_EOF);
+/// Return true if `kind` is a set in `mask`, false otherwise.
+static inline bool NT_Token_member(NT_TokenKind kind, NT_TokenMask mask)
+{
+    return (mask & ((size_t)1 << kind)) != 0;
+}
 
 static const NT_TokenMask PATH_PUNCTUATION_MASK =
-    ((Py_ssize_t)1 << TOK_DOT) | ((Py_ssize_t)1 << TOK_L_BRACKET);
+    ((size_t)1 << TOK_DOT) | ((size_t)1 << TOK_L_BRACKET);
 
 NT_Parser *NT_Parser_new(NT_Mem *mem, PyObject *str, NT_Token *tokens,
                          Py_ssize_t token_count)
@@ -398,7 +408,7 @@ static inline int NT_Parser_expect_expression(NT_Parser *p)
 {
     NT_Token *token = NT_Parser_current(p);
 
-    if (NT_Token_mask_test(token->kind, TERMINATE_EXPR_MASK))
+    if (NT_Token_member(token->kind, TERMINATE_EXPR_MASK))
     {
         nt_parser_error(token, "expected an expression");
         return -1;
@@ -417,7 +427,7 @@ static inline bool NT_Parser_tag(NT_Parser *p, NT_TokenKind kind)
         return true;
     }
 
-    if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+    if (NT_Token_member(token->kind, WHITESPACE_CONTROL_MASK))
     {
         return NT_Parser_peek_n(p, 2)->kind == kind;
     }
@@ -430,16 +440,16 @@ static inline bool NT_Parser_end_block(NT_Parser *p, NT_TokenMask end)
     // Assumes we're at TOK_TAG_START.
     NT_Token *token = NT_Parser_peek(p);
 
-    if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+    if (NT_Token_member(token->kind, WHITESPACE_CONTROL_MASK))
     {
         NT_Token *peeked = NT_Parser_peek_n(p, 2);
-        if (NT_Token_mask_test(peeked->kind, end))
+        if (NT_Token_member(peeked->kind, end))
         {
             return true;
         }
     }
 
-    if (NT_Token_mask_test(token->kind, end))
+    if (NT_Token_member(token->kind, end))
     {
         return true;
     }
@@ -450,7 +460,7 @@ static inline bool NT_Parser_end_block(NT_Parser *p, NT_TokenMask end)
 static inline void NT_Parser_carry_wc(NT_Parser *p)
 {
     NT_Token *token = NT_Parser_current(p);
-    if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+    if (NT_Token_member(token->kind, WHITESPACE_CONTROL_MASK))
     {
         p->whitespace_carry = token->kind;
         p->pos++;
@@ -464,7 +474,7 @@ static inline void NT_Parser_carry_wc(NT_Parser *p)
 static inline void NT_Parser_skip_wc(NT_Parser *p)
 {
     NT_Token *token = NT_Parser_current(p);
-    if (NT_Token_mask_test(token->kind, WHITESPACE_CONTROL_MASK))
+    if (NT_Token_member(token->kind, WHITESPACE_CONTROL_MASK))
     {
         p->pos++;
     }
@@ -497,7 +507,7 @@ static NT_Node *NT_Parser_parse_text(NT_Parser *p, NT_Token *token)
     NT_TokenKind wc_right = TOK_WC_NONE;
     NT_Token *peeked = NT_Parser_peek(p);
 
-    if (NT_Token_mask_test(peeked->kind, WHITESPACE_CONTROL_MASK))
+    if (NT_Token_member(peeked->kind, WHITESPACE_CONTROL_MASK))
     {
         wc_right = peeked->kind;
     }
@@ -936,7 +946,7 @@ static NT_Expr *NT_Parser_parse_primary(NT_Parser *p, Precedence prec)
         token = NT_Parser_current(p);
         kind = token->kind;
 
-        if (kind == TOK_EOF || !NT_Token_mask_test(kind, BIN_OP_MASK) ||
+        if (kind == TOK_EOF || !NT_Token_member(kind, BIN_OP_MASK) ||
             precedence(kind) < prec)
         {
             break;
@@ -980,7 +990,7 @@ static NT_Expr *NT_Parser_parse_group(NT_Parser *p)
 static PyObject *NT_Parser_parse_identifier(NT_Parser *p)
 {
     NT_Token *token = NT_Parser_eat(p, TOK_WORD);
-    if (NT_Token_mask_test(NT_Parser_current(p)->kind, PATH_PUNCTUATION_MASK))
+    if (NT_Token_member(NT_Parser_current(p)->kind, PATH_PUNCTUATION_MASK))
     {
         return nt_parser_error(token, "expected an identifier, found a path");
     }
@@ -1054,7 +1064,7 @@ static NT_Expr *NT_Parser_parse_path(NT_Parser *p)
     NT_Expr *expr = NULL;
     NT_Expr *result = NULL;
 
-    NT_Token *token_copy = NT_Token_copy(token);
+    NT_Token *token_copy = NT_Token_copy(p->mem, token);
     if (!token_copy)
     {
         return NULL;
@@ -1182,7 +1192,6 @@ static PyObject *NT_Parser_parse_shorthand_path_selector(NT_Parser *p)
     return segment;
 }
 
-/// Return a new string. The text in str between token `start` and `end`.
 static inline PyObject *NT_Token_text(NT_Token *token, PyObject *str)
 {
     return PyUnicode_Substring(str, token->start, token->end);

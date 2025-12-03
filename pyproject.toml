@@ -5,8 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nano-template"
 version = "0.1.0"
-requires-python = ">=3.13"
+description = "Minimal, fast templates for Python"
+readme = "README.md"
+authors = [{ name = "James Prior", email = "jamesgr.prior@gmail.com" }]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
 dependencies = []
+
+[project.urls]
+Issues = "https://github.com/jg-rp/nano-template/issues"
+Source = "https://github.com/jg-rp/nano-template"
 
 [dependency-groups]
 dev = [

@@ -61,11 +61,17 @@ ext_modules = [
     )
 ]
 
+options: dict[str, dict[str, str]] = {}
+
+if not sysconfig.get_config_var("Py_GIL_DISABLED"):
+    options["bdist_wheel"] = {"py_limited_api": "cp39"}
+
+
 setup(
     name="nano_template",
     version="0.1",
     packages=find_packages(where="py"),
     ext_modules=ext_modules,
     package_dir={"": "py"},
-    options={"bdist_wheel": {"py_limited_api": "cp39"}},
+    options=options,
 )

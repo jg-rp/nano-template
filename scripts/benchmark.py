@@ -11,8 +11,8 @@ from nano_template import render
 from nano_template._pure import Template as PyTemplate
 from nano_template._pure import render as py_render
 
-# XXX: I'm assuming `render_str` does not cache parsed templates.
-# TODO: Force parse by generating lots of distinct strings.
+# NOTE: At the time of writing, minijinja's `render_str` does not seem to do
+# any caching, which is what we want for this benchmark.
 # from minijinja import render_str
 
 
@@ -35,13 +35,13 @@ class Fixture:
 
 
 _TESTS = {
-    "parse ext": "parse(source)",
-    "parse pure": "PyTemplate(source)",
+    "parse c ext": "parse(source)",
+    "parse pure py": "PyTemplate(source)",
+    "just render c ext": "t.render(data)",
+    "just render pure py": "nt.render(data)",
     "parse and render ext": "render(source, data)",
-    "parse and render pure": "py_render(source, data)",
-    # "parse and render minijinja": "Environment().render_str(source, name=None, **data)",
-    "just render ext": "t.render(data)",
-    "just render pure": "nt.render(data)",
+    "parse and render pure py": "py_render(source, data)",
+    # "parse and render minijinja": "render_str(source, name=None, **data)",
 }
 
 

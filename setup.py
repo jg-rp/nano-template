@@ -11,7 +11,6 @@ def collect_sources(base_dir: str = "src") -> list[str]:
     return [str(p) for p in base.rglob("*.c")]
 
 
-# Check for debug flag
 debug_build = "--debug" in sys.argv
 if debug_build:
     sys.argv.remove("--debug")

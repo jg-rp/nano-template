@@ -221,15 +221,18 @@ print(t.render({"foo": {}}))  # <MISSING>
 
 TODO: move this
 
+(On an M2 Mac Mini)
+
 ```
 $ python scripts/benchmark.py
 (001) Best of 5 rounds with 10000 iterations per round.
-parse ext                     : best = 0.092188s | avg = 0.092236s
-parse pure                    : best = 2.408759s | avg = 2.416534s
-parse and render ext          : best = 0.159726s | avg = 0.159882s
-parse and render pure         : best = 2.816334s | avg = 2.822223s
-just render ext               : best = 0.062731s | avg = 0.062923s
-just render pure              : best = 0.308758s | avg = 0.309301s
+parse c ext                   : best = 0.095210s | avg = 0.095584s
+parse pure py                 : best = 2.426662s | avg = 2.430976s
+just render c ext             : best = 0.062218s | avg = 0.062360s
+just render pure py           : best = 0.307304s | avg = 0.307817s
+parse and render ext          : best = 0.160132s | avg = 0.160352s
+parse and render pure py      : best = 2.801302s | avg = 2.806309s
+parse and render minijinja    : best = 0.705259s | avg = 0.707955s
 ```
 
 ```

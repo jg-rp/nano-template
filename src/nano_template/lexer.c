@@ -410,9 +410,6 @@ static NT_Token NT_Lexer_lex_string(NT_Lexer *l, Py_UCS4 quote)
 
         l->pos++;
     }
-
-    PyErr_SetString(PyExc_RuntimeError, "unclosed string literal");
-    return NT_Token_make(start, l->pos, TOK_ERROR);
 }
 
 static inline Py_UCS4 NT_Lexer_read_char(NT_Lexer *l)

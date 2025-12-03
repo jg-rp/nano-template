@@ -15,6 +15,9 @@ from nano_template._pure import render as py_render
 # any caching, which is what we want for this benchmark.
 # from minijinja import render_str
 
+# from jinja2 import Template as JinjaTemplate
+# from jinja2 import Environment as JinjaEnvironment
+
 
 @dataclass
 class Fixture:
@@ -39,8 +42,10 @@ _TESTS = {
     "parse pure py": "PyTemplate(source)",
     "just render c ext": "t.render(data)",
     "just render pure py": "nt.render(data)",
+    # "just render jinja2": "jinja_template.render(**data)",
     "parse and render ext": "render(source, data)",
     "parse and render pure py": "py_render(source, data)",
+    # "parse and render jinja2": "jinja_env.from_string(source).render(**data)",
     # "parse and render minijinja": "render_str(source, name=None, **data)",
 }
 
@@ -61,6 +66,9 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
         "source": fixture.source,
         "t": t,
         # "render_str": render_str,
+        # "JinjaTemplate": JinjaTemplate,
+        # "jinja_env": JinjaEnvironment(cache_size=0, bytecode_cache=None),
+        # "jinja_template": JinjaTemplate(fixture.source),
     }
 
     print(

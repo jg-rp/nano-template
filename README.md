@@ -226,13 +226,15 @@ TODO: move this
 ```
 $ python scripts/benchmark.py
 (001) Best of 5 rounds with 10000 iterations per round.
-parse c ext                   : best = 0.095210s | avg = 0.095584s
-parse pure py                 : best = 2.426662s | avg = 2.430976s
-just render c ext             : best = 0.062218s | avg = 0.062360s
-just render pure py           : best = 0.307304s | avg = 0.307817s
-parse and render ext          : best = 0.160132s | avg = 0.160352s
-parse and render pure py      : best = 2.801302s | avg = 2.806309s
-parse and render minijinja    : best = 0.705259s | avg = 0.707955s
+parse c ext                   : best = 0.094950s | avg = 0.096201s
+parse pure py                 : best = 2.384615s | avg = 2.385552s
+just render c ext             : best = 0.062904s | avg = 0.062986s
+just render pure py           : best = 0.316543s | avg = 0.317282s
+just render jinja2            : best = 0.172697s | avg = 0.172831s
+parse and render ext          : best = 0.161810s | avg = 0.163282s
+parse and render pure py      : best = 2.752144s | avg = 2.765039s
+parse and render minijinja    : best = 0.703238s | avg = 0.706207s
+parse and render jinja2       : <with caching disabled, I got bored waiting>
 ```
 
 ```

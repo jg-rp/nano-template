@@ -41,16 +41,20 @@ else:
     #         "-fsanitize=address",
     #     ]
 
+define_macros: list[tuple[str, str | None]] = [
+    ("PY_SSIZE_T_CLEAN", None),
+]
+
+# See https://docs.python.org/3/howto/free-threading-extensions.html#limited-c-api-and-stable-abi
+if not sysconfig.get_config_var("Py_GIL_DISABLED"):
+    define_macros.append(("Py_LIMITED_API", "0x03090000"))
 
 ext_modules = [
     Extension(
         "nano_template._nano_template",
         sources=collect_sources(),
         include_dirs=["include"],
-        define_macros=[
-            ("PY_SSIZE_T_CLEAN", None),
-            ("Py_LIMITED_API", "0x03090000"),  # 3.9
-        ],
+        define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         py_limited_api=not sysconfig.get_config_var("Py_GIL_DISABLED"),

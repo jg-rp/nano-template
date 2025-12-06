@@ -152,6 +152,18 @@ NT_Parser *NT_Parser_new(NT_Mem *mem, PyObject *str, NT_Token *tokens,
     return parser;
 }
 
+void NT_Parser_free(NT_Parser *p)
+{
+    if (p->tokens)
+    {
+        PyMem_Free(p->tokens);
+        p->tokens = NULL;
+    }
+
+    Py_XDECREF(p->str);
+    PyMem_Free(p);
+}
+
 static NT_Node *NT_Parser_make_node(NT_Parser *p, NT_NodeKind kind)
 {
     NT_Node *node = NT_Mem_alloc(p->mem, sizeof(NT_Node));
@@ -255,18 +267,6 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj)
     page->objs[page->count++] = obj;
     NT_Mem_ref(p->mem, obj);
     return 0;
-}
-
-void NT_Parser_free(NT_Parser *p)
-{
-    if (p->tokens)
-    {
-        PyMem_Free(p->tokens);
-        p->tokens = NULL;
-    }
-
-    Py_XDECREF(p->str);
-    PyMem_Free(p);
 }
 
 NT_Node *NT_Parser_parse_root(NT_Parser *p)

@@ -87,7 +87,13 @@ NT_Lexer *NT_Lexer_new(PyObject *str)
     lexer->stack_capacity = 0;
     lexer->stack_top = 0;
 
-    NT_Lexer_push(lexer, STATE_MARKUP);
+    if (NT_Lexer_push(lexer, STATE_MARKUP) < 0)
+    {
+        NT_Lexer_free(lexer);
+        lexer = NULL;
+        return NULL;
+    }
+
     return lexer;
 }
 
@@ -98,8 +104,8 @@ void NT_Lexer_free(NT_Lexer *l)
     l->state = NULL;
     l->stack_capacity = 0;
     l->stack_top = 0;
-    PyMem_Free(l);
     l->pos = 0;
+    PyMem_Free(l);
 }
 
 NT_Token NT_Lexer_next(NT_Lexer *l)

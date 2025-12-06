@@ -21,6 +21,8 @@ static struct PyModuleDef nano_template_module = {
     .m_size = -1,
 };
 
+// TODO: Multi-Phase Initialization? Sticking with single-phase for now.
+
 PyMODINIT_FUNC PyInit__nano_template(void)
 {
     PyObject *mod = PyModule_Create(&nano_template_module);

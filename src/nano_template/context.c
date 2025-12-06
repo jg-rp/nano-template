@@ -24,7 +24,13 @@ NT_RenderContext *NT_RenderContext_new(PyObject *str, PyObject *globals,
     ctx->serializer = serializer;
     ctx->undefined = undefined;
 
-    NT_RenderContext_push(ctx, globals);
+    if (NT_RenderContext_push(ctx, globals) < 0)
+    {
+        NT_RenderContext_free(ctx);
+        ctx = NULL;
+        return NULL;
+    }
+
     return ctx;
 }
 

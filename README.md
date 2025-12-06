@@ -2,6 +2,10 @@
 
 Minimal, fast, non-evaluating text templates for Python.
 
+![PyPI - License](https://img.shields.io/pypi/l/nano-template?style=flat-square)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nano-template?style=flat-square)
+![PyPI - Version](https://img.shields.io/pypi/v/nano-template?style=flat-square)
+
 ## Install
 
 Use [pip](https://docs.python.org/3/installing/index.html), or your favorite package manager:

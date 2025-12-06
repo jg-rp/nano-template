@@ -25,8 +25,8 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.0
-        # env:
-        #   CIBW_SOME_OPTION: value
+        env:
+          CIBW_TEST_COMMAND: pytest {project}/tests
         #   ...
         # with:
         #   package-dir: .

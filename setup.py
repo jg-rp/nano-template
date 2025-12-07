@@ -23,6 +23,7 @@ if sys.platform == "win32":
 else:
     extra_compile_args = (
         [
+            "-std=c99",
             "-O0",
             "-g",
             "-Wall",
@@ -31,7 +32,12 @@ else:
             # "-fno-omit-frame-pointer",
         ]
         if debug_build
-        else ["-O3", "-Wall", "-Wextra"]
+        else [
+            "-std=c99",
+            "-O3",
+            "-Wall",
+            "-Wextra",
+        ]
     )
 
     # if debug_build:

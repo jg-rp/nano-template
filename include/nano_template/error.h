@@ -22,43 +22,37 @@ static void *nt_parser_error(const NT_Token *token, const char *fmt, ...)
 
     if (!msg_obj)
     {
-        goto fail;
+        goto cleanup;
     }
 
     exc_instance =
         PyObject_CallFunctionObjArgs(PyExc_RuntimeError, msg_obj, NULL);
     if (!exc_instance)
     {
-        goto fail;
+        goto cleanup;
     }
 
     start_obj = PyLong_FromSsize_t(token->start);
     if (!start_obj)
     {
-        goto fail;
+        goto cleanup;
     }
 
     end_obj = PyLong_FromSsize_t(token->end);
     if (!end_obj)
     {
-        goto fail;
+        goto cleanup;
     }
 
     if (PyObject_SetAttrString(exc_instance, "start_index", start_obj) < 0 ||
         PyObject_SetAttrString(exc_instance, "stop_index", end_obj) < 0)
     {
-        goto fail;
+        goto cleanup;
     }
 
-    Py_DECREF(start_obj);
-    Py_DECREF(end_obj);
-    Py_DECREF(msg_obj);
-
     PyErr_SetObject(PyExc_RuntimeError, exc_instance);
-    Py_DECREF(exc_instance);
-    return NULL;
 
-fail:
+cleanup:
     Py_XDECREF(start_obj);
     Py_XDECREF(end_obj);
     Py_XDECREF(msg_obj);

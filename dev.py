@@ -1,6 +1,12 @@
+import sys
 from nano_template import render
 
-source = "{% if a %}a{% else %}b{% else %}c{% endif %}"
-data = {"a": False, "b": False}
+before = sys.gettotalrefcount()
 
-print(render(None, data))
+for i in range(10000):
+    render("{% if a %}a{% else %}c{% endif %}", {"a": False, "b": False})
+    if i % 1000 == 0:
+        print(f"Iteration {i}, total refcount={sys.gettotalrefcount()}")
+
+after = sys.gettotalrefcount()
+print("Refcount delta:", after - before)

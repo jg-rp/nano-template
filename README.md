@@ -249,7 +249,39 @@ format string                 : best = 0.375050s | avg = 0.375237s
 
 ## Contributing
 
+TODO
+
+## Notes to self
+
 TODO: move this
+
+### PYTHONMALLOC=debug
+
+Use `PYTHONMALLOC=debug python dev.py` to activate Python's debug memory allocator, which inserts guard bytes, fills memory with known patterns, and performs validation to catch buffer overflows, use-after-free, and double frees when using Python memory APIs.
+
+ASAN does not seem to catch these.
+
+### Manual reference leak check
+
+(With a debug Python build.)  
+(A debug build will also report negative reference counts.)
+
+If the delta is small and consistent, it's probably not a ref count leak.
+
+```python
+import sys
+from nano_template import render
+
+before = sys.gettotalrefcount()
+
+for i in range(10000):
+    render("{% if a %}a{% else %}c{% endif %}", {"a": False, "b": False})
+    if i % 1000 == 0:
+        print(f"Iteration {i}, total refcount={sys.gettotalrefcount()}")
+
+after = sys.gettotalrefcount()
+print("Refcount delta:", after - before)
+```
 
 ### ABI 3 Audit
 

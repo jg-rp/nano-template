@@ -28,8 +28,6 @@ else:
             "-g",
             "-Wall",
             "-Wextra",
-            # "-fsanitize=address",
-            # "-fno-omit-frame-pointer",
         ]
         if debug_build
         else [
@@ -39,12 +37,6 @@ else:
             "-Wextra",
         ]
     )
-
-    # if debug_build:
-    #     extra_link_args = [
-    #         "-static-libasan",
-    #         "-fsanitize=address",
-    #     ]
 
 define_macros: list[tuple[str, str | None]] = [
     ("PY_SSIZE_T_CLEAN", None),

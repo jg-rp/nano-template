@@ -255,6 +255,26 @@ TODO
 
 TODO: move this
 
+### Python Debug Build
+
+Build Python in debug mode from source in `~/python-debug`:
+
+```
+./configure --prefix=$HOME/python-debug --with-pydebug
+```
+
+Tell uv to use the debug build instead of system or downloaded Python version:
+
+```
+uv sync -p <path/to/python debug binary>
+```
+
+Rebuild the extension in debug mode:
+
+```
+uv run python setup.py build_ext --inplace --force --debug
+```
+
 ### PYTHONMALLOC=debug
 
 Use `PYTHONMALLOC=debug python dev.py` to activate Python's debug memory allocator, which inserts guard bytes, fills memory with known patterns, and performs validation to catch buffer overflows, use-after-free, and double frees when using Python memory APIs.
@@ -295,6 +315,15 @@ Example successful output:
 ```
 [17:55:59] 💁 nano_template-0.1.0-cp39-abi3-linux_x86_64.whl: 1 extensions scanned; 0 ABI version mismatches and 0 ABI violations found
 ```
+
+### Release
+
+1. Manually run the [Build wheels workflow](https://github.com/jg-rp/nano-template/actions/workflows/build.yaml).
+1. Clean `./dist/`.
+1. Download workflow artifacts.
+1. Extract artifacts to `./dist`.
+1. Build sdist with `uv run build --sdist`
+1. Upload `uv run python -m twine upload dist/*`
 
 ## License
 

@@ -176,7 +176,6 @@ static int render_for_tag(const NT_Node *node, NT_RenderContext *ctx,
         goto fail;
     }
 
-    Py_INCREF(namespace);
     if (NT_RenderContext_push(ctx, namespace) < 0)
     {
         goto fail;

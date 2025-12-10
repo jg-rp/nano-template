@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-#ifndef NT_SPAN_H
-#define NT_SPAN_H
+#ifndef NT_TOKEN_H
+#define NT_TOKEN_H
 
 #include "nano_template/allocator.h"
 #include "nano_template/common.h"

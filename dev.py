@@ -1,6 +1,10 @@
 import json
-import sys
 from nano_template import parse
+
+import gc
+
+# gc.set_debug(gc.DEBUG_LEAK)
+# gc.set_debug(gc.DEBUG_SAVEALL)
 
 with open("tests/fixtures/001/data.json") as fd:
     data = json.load(fd)
@@ -8,24 +12,17 @@ with open("tests/fixtures/001/data.json") as fd:
 with open("tests/fixtures/001/template.txt") as fd:
     source = fd.read()
 
-# source = """
-# START
-# {% for x in y %}
-#   - {{ x }}
-# {% endfor %}
-# END
-# """
+gc.disable()
+gc.collect()
+before = len(gc.get_objects())
 
-# data = {"y": list(range(10))}
+parse(source).render(data)
 
-template = parse(source)
+gc.collect()
+after = len(gc.get_objects())
+print("Object delta:", after - before)
+gc.enable()
 
-before = sys.gettotalrefcount()
-
-for i in range(10000):
-    template.render(data)
-    if i % 1000 == 0:
-        print(f"Iteration {i}, total refcount={sys.gettotalrefcount()}")
-
-after = sys.gettotalrefcount()
-print("Refcount delta:", after - before)
+# leaked = [o for o in gc.garbage if type(o).__module__ == "_nano_template"]
+# for o in leaked:
+#     print(o, type(o))

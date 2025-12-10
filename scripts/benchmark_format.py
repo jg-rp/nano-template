@@ -32,7 +32,7 @@ def benchmark(number: int = 1000000, repeat: int = 5) -> None:
         "template": template,
     }
 
-    print(f"(002) Best of {repeat} rounds with {number} iterations per round.")
+    print(f"(002) {repeat} rounds with {number} iterations per round.")
 
     for name, stmt in _TESTS.items():
         times = timeit.repeat(stmt, globals=_globals, repeat=repeat, number=number)

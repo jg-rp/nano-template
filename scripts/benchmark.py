@@ -14,6 +14,7 @@ from nano_template._pure import render as py_render
 # NOTE: At the time of writing, minijinja's `render_str` does not seem to do
 # any caching, which is what we want for this benchmark.
 # from minijinja import render_str
+# from minijinja import Environment as MiniJinjaEnv
 
 # from jinja2 import Template as JinjaTemplate
 # from jinja2 import Environment as JinjaEnvironment
@@ -43,6 +44,7 @@ _TESTS = {
     "just render c ext": "t.render(data)",
     "just render pure py": "nt.render(data)",
     # "just render jinja2": "jinja_template.render(**data)",
+    # "just render minijinja": "minijinja_env.render_template('bench', **data)",
     "parse and render ext": "render(source, data)",
     "parse and render pure py": "py_render(source, data)",
     # "parse and render jinja2": "jinja_env.from_string(source).render(**data)",
@@ -55,6 +57,8 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
     fixture = Fixture.load(Path(path))
     t = parse(fixture.source)
     nt = PyTemplate(fixture.source)
+
+    # minijinja_env = MiniJinjaEnv(templates={"bench": fixture.source})
 
     _globals: dict[str, Any] = {
         "data": fixture.data,
@@ -69,11 +73,10 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
         # "JinjaTemplate": JinjaTemplate,
         # "jinja_env": JinjaEnvironment(cache_size=0, bytecode_cache=None),
         # "jinja_template": JinjaTemplate(fixture.source),
+        # "minijinja_env": minijinja_env,
     }
 
-    print(
-        f"({fixture.name}) Best of {repeat} rounds with {number} iterations per round."
-    )
+    print(f"({fixture.name}) {repeat} rounds with {number} iterations per round.")
 
     for name, stmt in _TESTS.items():
         times = timeit.repeat(stmt, globals=_globals, repeat=repeat, number=number)

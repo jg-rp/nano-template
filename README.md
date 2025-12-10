@@ -225,24 +225,26 @@ print(t.render({"foo": {}}))  # <MISSING>
 
 TODO: move this
 
-(On an M2 Mac Mini)
+(On an M2 Mac Mini with Python 3.13)
 
 ```
 $ python scripts/benchmark.py
-(001) Best of 5 rounds with 10000 iterations per round.
-parse c ext                   : best = 0.094950s | avg = 0.096201s
-parse pure py                 : best = 2.384615s | avg = 2.385552s
-just render c ext             : best = 0.062904s | avg = 0.062986s
-just render pure py           : best = 0.316543s | avg = 0.317282s
-just render jinja2            : best = 0.172697s | avg = 0.172831s
-parse and render ext          : best = 0.161810s | avg = 0.163282s
-parse and render pure py      : best = 2.752144s | avg = 2.765039s
-parse and render minijinja    : best = 0.703238s | avg = 0.706207s
+(001) 5 rounds with 10000 iterations per round.
+parse c ext                   : best = 0.092587s | avg = 0.092743s
+parse pure py                 : best = 2.378554s | avg = 2.385293s
+just render c ext             : best = 0.061812s | avg = 0.061850s
+just render pure py           : best = 0.314468s | avg = 0.315076s
+just render jinja2            : best = 0.170373s | avg = 0.170706s
+just render minijinja         : best = 0.454723s | avg = 0.457256s
+parse and render ext          : best = 0.155797s | avg = 0.156455s
+parse and render pure py      : best = 2.733121s | avg = 2.745028s
 parse and render jinja2       : <with caching disabled, I got bored waiting>
+parse and render minijinja    : best = 0.705995s | avg = 0.707589s
 ```
 
 ```
-(002) Best of 5 rounds with 1000000 iterations per round.
+$ python scripts/benchmark_format.py
+(002) 5 rounds with 1000000 iterations per round.
 render template               : best = 0.413830s | avg = 0.419547s
 format string                 : best = 0.375050s | avg = 0.375237s
 ```

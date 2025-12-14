@@ -359,7 +359,7 @@ Example successful output:
 1. Clean `./dist/`.
 1. Download workflow artifacts.
 1. Extract artifacts to `./dist`.
-1. Build sdist with `uv run build --sdist`
+1. Build sdist with `uv run python -m build --sdist`
 1. Upload `uv run python -m twine upload dist/*`
 
 ## License

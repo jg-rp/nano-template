@@ -249,7 +249,7 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj)
         expr->tail = page;
     }
 
-    if (expr->tail->count == NT_OBJ_PRE_PAGE)
+    if (expr->tail->count == NT_OBJ_PER_PAGE)
     {
         NT_ObjPage *new_page = NT_Mem_alloc(p->mem, sizeof(NT_ObjPage));
         if (!new_page)

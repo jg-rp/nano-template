@@ -42,6 +42,9 @@ define_macros: list[tuple[str, str | None]] = [
     ("PY_SSIZE_T_CLEAN", None),
 ]
 
+if not debug_build:
+    define_macros.append(("NDEBUG", None))
+
 # See https://docs.python.org/3/howto/free-threading-extensions.html#limited-c-api-and-stable-abi
 if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     define_macros.append(("Py_LIMITED_API", "0x03090000"))

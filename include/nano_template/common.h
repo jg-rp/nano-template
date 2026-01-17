@@ -4,6 +4,7 @@
 #define NT_COMMON_H
 
 #include <Python.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 

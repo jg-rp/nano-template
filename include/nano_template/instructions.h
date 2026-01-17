@@ -5,7 +5,7 @@
 
 #include "nano_template/common.h"
 
-/// @brief Op codes for our virtual machine.
+/// @brief Opcodes for our virtual machine.
 typedef enum
 {
     NT_OP_NULL = 0,
@@ -29,7 +29,7 @@ typedef enum
     NT_OP_TRUE,
 } NT_Op;
 
-/// @brief Bytecode operation definition.
+/// @brief Operation definition.
 typedef struct NT_OpDef
 {
     char *name;
@@ -38,26 +38,29 @@ typedef struct NT_OpDef
 } NT_OpDef;
 
 /// @brief Bytecode instructions.
-typedef struct NT_Code
+typedef struct NT_Ins
 {
-    Py_ssize_t size;
-    Py_ssize_t capacity;
+    size_t size;
+    size_t capacity;
     uint8_t *bytes;
-} NT_Code;
+} NT_Ins;
 
 /// @brief Allocate and initialize a new growable array of instructions.
-NT_Code *NT_Code_new();
+/// @return A pointer to the new instructions, or NULL on error with an
+/// exception set.
+NT_Ins *NT_Ins_new();
+void NT_Ins_free(NT_Ins *ins);
 
 /// @brief Append a new zero-operand instruction to `ins`.
 /// @param ins Instructions
 /// @return 0 on success, -1 on failure.
-int NT_Code_pack(NT_Code *ins, NT_Op op);
+int NT_Ins_pack(NT_Ins *ins, NT_Op op);
 
 /// @brief Append a new single-operand instruction to `ins`.
 /// @param ins Instructions
 /// @param operand  Operand for the instruction.
 /// @return 0 on success, -1 on failure.
-int NT_Code_pack1(NT_Code *ins, NT_Op op, int operand);
+int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand);
 
 /// @brief Append a new two-operand instruction to `ins`.
 /// @param ins Instructions.
@@ -65,12 +68,12 @@ int NT_Code_pack1(NT_Code *ins, NT_Op op, int operand);
 /// @param op1 First operand for the instruction.
 /// @param op2 Second operand for the instruction.
 /// @return 0 on success, -1 on failure.
-int NT_Code_pack2(NT_Code *ins, NT_Op op, int op1, int op2);
+int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2);
 
 /// @brief Read a single operand from `ins`.
 /// @param ins Instructions.
 /// @param n Number of bytes for the operand.
 /// @param offset Index into `ins` from which to start reading.
 /// @return An operand.
-int NT_Code_read_bytes(NT_Code *ins, uint8_t n, Py_ssize_t offset);
+int NT_Ins_read_bytes(NT_Ins *ins, uint8_t n, size_t offset);
 #endif

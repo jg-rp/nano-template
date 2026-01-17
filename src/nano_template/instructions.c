@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 
-#include "nano_template/bytecode.h"
+#include "nano_template/instructions.h"
 
 /// @brief Write a single byte to bytecode instructions `ins`.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Code_write_byte(NT_Code *ins, uint8_t byte);
+static int NT_Code_write_byte(NT_Ins *ins, uint8_t byte);
 
 /// @brief Write `operand` to `ins` as `byte_count` bytes with the most
 /// significant byte first.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Code_write_op(NT_Code *ins, int operand, uint8_t byte_count);
+static int NT_Code_write_op(NT_Ins *ins, int operand, uint8_t byte_count);
 
 /// @brief A mapping of opcode constants to their human readable names, total
 /// width in bytes and a null-terminated array of byte widths for each operand.
@@ -39,13 +39,50 @@ static NT_OpDef defs[] = {
     [NT_OP_TRUE] = {"OpTrue", 1, {NULL}},
 };
 
-int NT_Code_pack(NT_Code *ins, NT_Op op)
+NT_Ins *NT_Ins_new()
+{
+    NT_Ins *code = PyMem_Malloc(sizeof(NT_Ins));
+    if (!code)
+    {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    code->size = 0;
+    code->capacity = 0;
+    code->bytes = NULL;
+
+    return code;
+}
+
+void NT_Ins_free(NT_Ins *ins)
+{
+    PyMem_Free(ins->bytes);
+    ins->bytes = NULL;
+    ins->size = 0;
+    ins->capacity = 0;
+    PyMem_Free(ins);
+}
+
+int NT_Ins_read_bytes(NT_Ins *ins, uint8_t n, size_t offset)
+{
+    assert(offset + n - 1 < ins->size);
+
+    int value = 0;
+    for (int i = 0; i < n; i++)
+    {
+        value = (value << 8) | ins->bytes[offset + i];
+    }
+    return value;
+}
+
+int NT_Ins_pack(NT_Ins *ins, NT_Op op)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
     return NT_Code_write_byte(ins, op);
 }
 
-int NT_Code_pack1(NT_Code *ins, NT_Op op, int operand)
+int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
     NT_OpDef op_def = defs[op];
@@ -58,11 +95,11 @@ int NT_Code_pack1(NT_Code *ins, NT_Op op, int operand)
     assert(op_def.operand_widths[0] != NULL);
     uint8_t byte_count = op_def.operand_widths[0];
 
-    // TODO: defensively check `operand` can fit into `byte_count` bits?
+    // TODO: defensively check `operand` can fit into `byte_count` bytes?
     return NT_Code_write_op(ins, operand, byte_count);
 }
 
-int NT_Code_pack2(NT_Code *ins, NT_Op op, int op1, int op2)
+int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
     NT_OpDef op_def = defs[op];
@@ -82,7 +119,7 @@ int NT_Code_pack2(NT_Code *ins, NT_Op op, int op1, int op2)
     return NT_Code_write_op(ins, op2, op_def.operand_widths[1]);
 }
 
-static int NT_Code_write_op(NT_Code *ins, int operand, uint8_t byte_count)
+static int NT_Code_write_op(NT_Ins *ins, int operand, uint8_t byte_count)
 {
     uint8_t byte = NULL;
 
@@ -98,11 +135,11 @@ static int NT_Code_write_op(NT_Code *ins, int operand, uint8_t byte_count)
     return 0;
 }
 
-static int NT_Code_write_byte(NT_Code *ins, uint8_t byte)
+static int NT_Code_write_byte(NT_Ins *ins, uint8_t byte)
 {
     if (ins->size >= ins->capacity)
     {
-        Py_ssize_t new_cap = ins->capacity * 2;
+        Py_ssize_t new_cap = ins->capacity == 0 ? 64 : ins->capacity * 2;
         uint8_t *new_bytes =
             PyMem_Realloc(ins->bytes, sizeof(uint8_t) * new_cap);
 

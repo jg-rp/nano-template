@@ -62,6 +62,15 @@ int NT_Ins_pack(NT_Ins *ins, NT_Op op);
 /// @return 0 on success, -1 on failure.
 int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand);
 
+/// @brief Write a single-operand instruction to `ins` at position `pos`,
+/// replacing bytes for the instruction at pos.
+/// @param ins Instructions.
+/// @param op Instruction op code
+/// @param operand Operand for the instruction.
+/// @param pos Index into `ins`.
+/// @return 0 on success, -1 on failure.
+int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos);
+
 /// @brief Append a new two-operand instruction to `ins`.
 /// @param ins Instructions.
 /// @param op An op code.

@@ -176,6 +176,7 @@ static NT_Node *NT_Parser_make_node(NT_Parser *p, NT_NodeKind kind)
     node->expr = NULL;
     node->head = NULL;
     node->tail = NULL;
+    node->child_count = 0;
     node->str = NULL;
     return node;
 }
@@ -212,6 +213,7 @@ static int NT_Parser_add_node(NT_Parser *p, NT_Node *parent, NT_Node *child)
 
     NT_NodePage *page = parent->tail;
     page->nodes[page->count++] = child;
+    parent->child_count++;
     return 0;
 }
 

@@ -2,14 +2,14 @@
 
 #include "nano_template/instructions.h"
 
-/// @brief Write a single byte to bytecode instructions `ins`.
+/// @brief Append a single byte to bytecode instructions `ins`.
 /// @return 0 on success, -1 on failure with an exception set.
 static int NT_Code_write_byte(NT_Ins *ins, uint8_t byte);
 
 /// @brief Write `operand` to `ins` as `byte_count` bytes with the most
 /// significant byte first.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Code_write_op(NT_Ins *ins, int operand, uint8_t byte_count);
+static int NT_Code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count);
 
 /// @brief A mapping of opcode constants to their human readable names, total
 /// width in bytes and a null-terminated array of byte widths for each operand.
@@ -101,7 +101,26 @@ int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
     uint8_t byte_count = op_def.operand_widths[0];
 
     // TODO: defensively check `operand` can fit into `byte_count` bytes?
-    return NT_Code_write_op(ins, operand, byte_count);
+    return NT_Code_write_operand(ins, operand, byte_count);
+}
+
+int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos)
+{
+    assert(ins->bytes[pos] == op);
+    NT_OpDef op_def = defs[op];
+
+    assert(op_def.operand_widths[0] != NULL);
+    uint8_t byte_count = op_def.operand_widths[0];
+    uint8_t byte = NULL;
+
+    for (int i = 1, byte_index = byte_count - 1; byte_index >= 0;
+         i++, byte_index--)
+    {
+        byte = (operand >> (byte_index * 8)) & 0xFF;
+        ins->bytes[pos + i] = byte;
+    }
+
+    return 0;
 }
 
 int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2)
@@ -115,16 +134,16 @@ int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2)
     }
 
     assert(op_def.operand_widths[0] != NULL);
-    if (NT_Code_write_op(ins, op1, op_def.operand_widths[0]) < 0)
+    if (NT_Code_write_operand(ins, op1, op_def.operand_widths[0]) < 0)
     {
         return -1;
     }
 
     assert(op_def.operand_widths[1] != NULL);
-    return NT_Code_write_op(ins, op2, op_def.operand_widths[1]);
+    return NT_Code_write_operand(ins, op2, op_def.operand_widths[1]);
 }
 
-static int NT_Code_write_op(NT_Ins *ins, int operand, uint8_t byte_count)
+static int NT_Code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count)
 {
     uint8_t byte = NULL;
 

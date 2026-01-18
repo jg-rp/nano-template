@@ -35,6 +35,7 @@ typedef struct NT_Node
     // Paged array holding child nodes.
     NT_NodePage *head;
     NT_NodePage *tail;
+    size_t child_count;
 
     // Optional expression, like a conditional or loop expression.
     NT_Expr *expr;

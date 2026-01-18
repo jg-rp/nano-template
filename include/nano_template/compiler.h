@@ -10,23 +10,14 @@
 
 typedef struct NT_Compiler
 {
-    // A pools of constants (just Python string objects in this case).
-    PyObject *constant_pool;
-    size_t constants_pool_size;
-    size_t constants_pool_capacity;
-
-    // A pool of potential keys/indexes into user data mappings/sequences.
-    PyObject *selector_pool;
-    size_t selectors_pool_size;
-    size_t selectors_pool_capacity;
-
-    // A pool of non-markup template text.
-    PyObject *text_pool;
-    size_t text_pool_size;
-    size_t text_pool_capacity;
+    // A pools of constants. We treat variable path "selectors" and raw
+    // template text as constants.
+    PyObject **constant_pool;
+    size_t constant_pool_size;
+    size_t constant_pool_capacity;
 
     // A stack of mappings (PyDict for now) for locally-scoped variables.
-    PyObject *scope;
+    PyObject **scope;
     size_t scope_top;
     size_t scope_capacity;
 
@@ -36,14 +27,8 @@ typedef struct NT_Compiler
 /// @brief The result of calling `NT_Compiler_bytecode()`.
 typedef struct NT_Code
 {
-    PyObject *constant_pool;
+    PyObject **constant_pool;
     size_t constant_pool_size;
-
-    PyObject *selector_pool;
-    size_t selector_pool_size;
-
-    PyObject *text_pool;
-    size_t text_pool_size;
 
     uint8_t *instructions;
     size_t instructions_size;
@@ -64,7 +49,7 @@ int NT_Compiler_compile(NT_Compiler *c, NT_Node *node);
 /// @return 0 on success, -1 on failure with an exception set.
 int NT_Compiler_compile_expression(NT_Compiler *c, NT_Expr *expr);
 
-/// @brief Move instructions and various pools out of the compiler.
+/// @brief Move instructions and pools out of the compiler.
 /// @return A pointer to a new NT_Code that now owns compiled instructions and
 /// pools.
 NT_Code *NT_Compiler_bytecode(NT_Compiler *c);

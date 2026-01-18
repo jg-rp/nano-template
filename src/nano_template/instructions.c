@@ -57,6 +57,11 @@ NT_Ins *NT_Ins_new()
 
 void NT_Ins_free(NT_Ins *ins)
 {
+    if (!ins)
+    {
+        return;
+    }
+
     PyMem_Free(ins->bytes);
     ins->bytes = NULL;
     ins->size = 0;

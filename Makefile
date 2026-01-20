@@ -33,7 +33,7 @@ build_debug:
 valgrind: build_debug
 	@echo "==> Running Valgrind on _nano_template extension..."
 	valgrind -s --leak-check=full --show-leak-kinds=all --track-origins=yes \
-		./.venv/bin/python dev.py
+		$(PYTHON) dev.py
 
 # Clean build artifacts
 clean:

@@ -8,8 +8,10 @@ from typing import Type
 
 from ._nano_template import Template
 from ._nano_template import TokenView as _TokenView
+from ._nano_template import BytecodeView as _BytecodeView
 from ._nano_template import parse as _parse
 from ._nano_template import tokenize as _tokenize
+from ._nano_template import bytecode as _bytecode
 from ._token_kind import TokenKind as _TokenKind
 from ._undefined import Undefined
 from ._undefined import StrictUndefined
@@ -18,12 +20,14 @@ from ._exceptions import TemplateSyntaxError
 from ._exceptions import UndefinedVariableError
 
 __all__ = (
+    "_bytecode",
     "_tokenize",
     "_TokenKind",
     "_TokenView",
     "parse",
     "render",
     "serialize",
+    "_BytecodeView",
     "StrictUndefined",
     "Template",
     "TemplateError",

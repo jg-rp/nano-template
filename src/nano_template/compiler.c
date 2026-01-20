@@ -42,14 +42,16 @@ static int NT_Compiler_define(NT_Compiler *c, PyObject *name, int *out_offset);
 static int NT_Compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
                                int *out_offset);
 
+static int NT_Compiler_compile_block(NT_Compiler *c, NT_Node *child);
+
 NT_Compiler *NT_Compiler_new(void)
 {
     NT_Compiler *c = NULL;
     NT_Ins *ins = NULL;
-    PyObject *scope = NULL;
+    PyObject **scope = NULL;
     size_t initial_scope_capacity = 8;
 
-    NT_Compiler *c = PyMem_Malloc(sizeof(NT_Compiler));
+    c = PyMem_Malloc(sizeof(NT_Compiler));
     if (!c)
     {
         PyErr_NoMemory();
@@ -88,7 +90,7 @@ fail:
 
 void NT_Compiler_free(NT_Compiler *c)
 {
-    for (int i = 0; i < c->constant_pool_size; i++)
+    for (size_t i = 0; i < c->constant_pool_size; i++)
     {
         Py_XDECREF(c->constant_pool[i]);
         c->constant_pool[i] = NULL;
@@ -99,7 +101,7 @@ void NT_Compiler_free(NT_Compiler *c)
     c->constant_pool_size = 0;
     c->constant_pool_capacity = 0;
 
-    for (int i = 0; i < c->scope_top; i++)
+    for (size_t i = 0; i < c->scope_top; i++)
     {
         Py_XDECREF(c->scope[i]);
         c->scope[i] = NULL;
@@ -141,7 +143,7 @@ NT_Code *NT_Compiler_bytecode(NT_Compiler *c)
     c->ins->bytes = NULL;
     c->ins->size = 0;
     c->ins->capacity = 0;
-    PyMem_free(c->ins);
+    PyMem_Free(c->ins);
     c->ins = NULL;
 
     return code;
@@ -149,7 +151,7 @@ NT_Code *NT_Compiler_bytecode(NT_Compiler *c)
 
 void NT_Code_free(NT_Code *code)
 {
-    for (int i = 0; i < code->constant_pool_size; i++)
+    for (size_t i = 0; i < code->constant_pool_size; i++)
     {
         Py_XDECREF(code->constant_pool[i]);
         code->constant_pool[i] = NULL;
@@ -159,11 +161,11 @@ void NT_Code_free(NT_Code *code)
     code->constant_pool = NULL;
     code->constant_pool_size = 0;
 
-    PyMem_free(code->instructions);
+    PyMem_Free(code->instructions);
     code->instructions = NULL;
     code->instructions_size = 0;
 
-    PyMem_free(code);
+    PyMem_Free(code);
 }
 
 int NT_Compiler_compile(NT_Compiler *c, NT_Node *node)
@@ -172,11 +174,11 @@ int NT_Compiler_compile(NT_Compiler *c, NT_Node *node)
     size_t after_block_pos = 0;
     size_t *jump_positions = NULL;
     size_t pos = 0;
+    size_t constant_index = 0;
 
     switch (node->kind)
     {
     case NODE_TEXT:
-        int constant_index = NULL;
         if (NT_Compiler_add_constant(c, node->str, &constant_index) < 0)
         {
             goto fail;
@@ -264,7 +266,7 @@ int NT_Compiler_compile(NT_Compiler *c, NT_Node *node)
 
     after_else:
 
-        for (int i = 0; i < node->child_count; i++)
+        for (size_t i = 0; i < node->child_count; i++)
         {
             if (NT_Compiler_change_operand(c, jump_positions[i],
                                            c->ins->size) < 0)
@@ -344,6 +346,12 @@ int NT_Compiler_compile_expression(NT_Compiler *c, NT_Expr *expr)
 
 fail:
     return -1;
+}
+
+static int NT_Compiler_compile_block(NT_Compiler *c, NT_Node *child)
+{
+    // TODO:
+    NTPY_TODO_I();
 }
 
 static int NT_Compiler_enter_scope(NT_Compiler *c)
@@ -477,7 +485,7 @@ static int NT_Compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
         if (offset)
         {
             *out_depth = depth;
-            *out_offset = PyLong_AsInt(offset);
+            *out_offset = PyLong_AsLong(offset);
             return 1;
         }
     }

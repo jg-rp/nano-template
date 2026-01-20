@@ -5,6 +5,8 @@
 
 #include "nano_template/common.h"
 
+#define MAX_OPERANDS 2
+
 /// @brief Opcodes for our virtual machine.
 typedef enum
 {
@@ -32,9 +34,10 @@ typedef enum
 /// @brief Operation definition.
 typedef struct NT_OpDef
 {
-    char *name;
-    uint8_t *operand_widths;
-    unsigned int width; // Total byte count for the instruction.
+    const char *name;
+    uint8_t operand_widths[MAX_OPERANDS];
+    uint8_t operand_count;
+    uint8_t width;
 } NT_OpDef;
 
 /// @brief Bytecode instructions.

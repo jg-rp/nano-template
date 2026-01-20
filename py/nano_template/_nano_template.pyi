@@ -26,3 +26,13 @@ def parse(
     serializer: Callable[[object], str],
     undefined: Type[Undefined],
 ) -> Template: ...
+
+class BytecodeView:
+    """Bytecode instructions and constant pool."""
+
+    @property
+    def instructions(self) -> bytes: ...
+    @property
+    def constants(self) -> list[object]: ...
+
+def bytecode(source: str) -> BytecodeView: ...

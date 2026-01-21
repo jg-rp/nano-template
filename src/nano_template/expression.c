@@ -170,6 +170,7 @@ static PyObject *eval_str_expr(const NT_Expr *expr, NT_RenderContext *ctx)
     (void)ctx;
     if (!expr->head || expr->head->count < 1)
     {
+        // TODO: set exception or change this to an assert?
         return NULL;
     }
     return Py_NewRef(expr->head->objs[0]);
@@ -179,28 +180,44 @@ static PyObject *eval_var_expr(const NT_Expr *expr, NT_RenderContext *ctx)
 {
     PyObject *op = NULL;
     PyObject *result = NULL;
+    NT_ObjPage *page = expr->head;
 
-    if (!expr->head || expr->head->count == 0)
+    if (!page || page->count == 0)
     {
         result = Py_NewRef(Py_None);
         goto cleanup;
     }
 
-    if (NT_RenderContext_get(ctx, expr->head->objs[0], &op) < 0)
+    if (NT_RenderContext_get(ctx, page->objs[0], &op) < 0)
     {
         result = undefined(expr, ctx, 0);
         goto cleanup;
     }
 
-    if (expr->head->count == 1)
+    if (page->count == 1)
     {
         result = Py_NewRef(op);
         goto cleanup;
     }
 
-    for (NT_ObjPage *page = expr->head; page; page = page->next)
+    // Evaluate the rest of the first page.
+    for (size_t i = 1; i < page->count; i++)
     {
-        for (size_t i = 1; i < page->count; i++)
+        Py_DECREF(op);
+        op = PyObject_GetItem(op, page->objs[i]);
+
+        if (!op)
+        {
+            PyErr_Clear();
+            result = undefined(expr, ctx, i);
+            goto cleanup;
+        }
+    }
+
+    // Evaluate subsequent pages.
+    for (page = page->next; page; page = page->next)
+    {
+        for (size_t i = 0; i < page->count; i++)
         {
             Py_DECREF(op);
             op = PyObject_GetItem(op, page->objs[i]);

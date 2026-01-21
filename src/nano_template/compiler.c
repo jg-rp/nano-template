@@ -381,36 +381,132 @@ static int compile_node_text(NT_Compiler *c, NT_Node *node)
 
 static int compile_expr_not(NT_Compiler *c, NT_Expr *expr)
 {
-    // TODO
-    NTPY_TODO_I();
+    assert(expr->right);
+
+    if (compile_expression(c, expr->right) < 0)
+    {
+        return -1;
+    }
+
+    size_t instruction_position = 0;
+
+    if (compiler_emit(c, NT_OP_NOT, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 static int compile_expr_and(NT_Compiler *c, NT_Expr *expr)
 {
-    // TODO
-    NTPY_TODO_I();
+    assert(expr->left);
+    assert(expr->right);
+
+    // Short circuit and last value.
+
+    if (compile_expression(c, expr->left) < 0)
+    {
+        return -1;
+    }
+
+    size_t instruction_position = 0;
+    size_t jump_not_truthy_pos = 0;
+
+    if (compiler_emit1(c, NT_OP_JUMP_IF_FALSY, 9999, &jump_not_truthy_pos) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (compile_expression(c, expr->right) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_change_operand(c, jump_not_truthy_pos, c->ins->size) < 0)
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 static int compile_expr_or(NT_Compiler *c, NT_Expr *expr)
 {
-    // TODO
-    NTPY_TODO_I();
+    assert(expr->left);
+    assert(expr->right);
+
+    // Short circuit and last value.
+
+    if (compile_expression(c, expr->left) < 0)
+    {
+        return -1;
+    }
+
+    size_t instruction_position = 0;
+    size_t jump_truthy_pos = 0;
+
+    if (compiler_emit1(c, NT_OP_JUMP_IF_TRUTHY, 9999, &jump_truthy_pos) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (compile_expression(c, expr->right) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_change_operand(c, jump_truthy_pos, c->ins->size) < 0)
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 static int compile_expr_str(NT_Compiler *c, NT_Expr *expr)
 {
-    // TODO
-    NTPY_TODO_I();
+    size_t instruction_position = 0;
+    size_t constant_index = 0;
+
+    NT_ObjPage *page = expr->head;
+    assert(page->count == 1);
+
+    if (compiler_add_constant(c, page->objs[0], &constant_index) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit1(c, NT_OP_CONSTANT, constant_index,
+                       &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    return 0;
 }
 
 static int compile_expr_var(NT_Compiler *c, NT_Expr *expr)
 {
     size_t instruction_position = 0;
     size_t constant_index = 0;
+
     int local_depth = 0;
     int local_offset = 0;
 
-    if (compiler_resolve(c, expr->head->objs[0], &local_depth, &local_offset))
+    NT_ObjPage *page = expr->head;
+
+    if (compiler_resolve(c, page->objs[0], &local_depth, &local_offset))
     {
         if (compiler_emit2(c, NT_OP_GET_LOCAL, local_depth, local_offset,
                            &instruction_position) < 0)
@@ -420,7 +516,7 @@ static int compile_expr_var(NT_Compiler *c, NT_Expr *expr)
     }
     else
     {
-        if (compiler_add_constant(c, expr->head->objs[0], &constant_index) < 0)
+        if (compiler_add_constant(c, page->objs[0], &constant_index) < 0)
         {
             return -1;
         }
@@ -432,7 +528,39 @@ static int compile_expr_var(NT_Compiler *c, NT_Expr *expr)
         }
     }
 
-    // TODO: OP_SELECTOR for each subsequent selector.
+    // OP_SELECTOR for the rest of the first page.
+    for (size_t i = 1; i < page->count; i++)
+    {
+        if (compiler_add_constant(c, page->objs[i], &constant_index) < 0)
+        {
+            return -1;
+        }
+
+        if (compiler_emit1(c, NT_OP_SELECTOR, constant_index,
+                           &instruction_position) < 0)
+        {
+            return -1;
+        }
+    }
+
+    // OP_SELECTOR for subsequent pages.
+    for (page = page->next; page; page = page->next)
+    {
+        for (size_t i = 0; i < page->count; i++)
+        {
+            if (compiler_add_constant(c, page->objs[i], &constant_index) < 0)
+            {
+                return -1;
+            }
+
+            if (compiler_emit1(c, NT_OP_SELECTOR, constant_index,
+                               &instruction_position) < 0)
+            {
+                return -1;
+            }
+        }
+    }
+
     return 0;
 }
 

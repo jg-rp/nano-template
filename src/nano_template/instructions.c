@@ -4,15 +4,15 @@
 
 /// @brief Append a single byte to bytecode instructions `ins`.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Code_write_byte(NT_Ins *ins, uint8_t byte);
+static int code_write_byte(NT_Ins *ins, uint8_t byte);
 
 /// @brief Write `operand` to `ins` as `byte_count` bytes with the most
 /// significant byte first.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count);
+static int code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count);
 
 /// @brief A table of opcode constants and their definitions.
-static NT_OpDef defs[] = {
+static NT_OpDef code_defs[] = {
     [NT_OP_NULL] = {"OpNull", {0, 0}, 0, 1},
     [NT_OP_CONSTANT] = {"OpConstant", {2, 0}, 1, 3},
     [NT_OP_ENTER_FRAME] = {"OpEnterFrame", {1, 0}, 1, 2},
@@ -79,15 +79,15 @@ int NT_Ins_read_bytes(NT_Ins *ins, uint8_t n, size_t offset)
 int NT_Ins_pack(NT_Ins *ins, NT_Op op)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-    return NT_Code_write_byte(ins, op);
+    return code_write_byte(ins, op);
 }
 
 int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-    NT_OpDef op_def = defs[op];
+    NT_OpDef op_def = code_defs[op];
 
-    if (NT_Code_write_byte(ins, op) < 0)
+    if (code_write_byte(ins, op) < 0)
     {
         return -1;
     }
@@ -97,13 +97,13 @@ int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
     uint8_t byte_count = op_def.operand_widths[0];
 
     // TODO: defensively check `operand` can fit into `byte_count` bytes?
-    return NT_Code_write_operand(ins, operand, byte_count);
+    return code_write_operand(ins, operand, byte_count);
 }
 
 int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos)
 {
     assert(ins->bytes[pos] == op);
-    NT_OpDef op_def = defs[op];
+    NT_OpDef op_def = code_defs[op];
 
     assert(op_def.operand_widths[0] != 0);
     assert(op_def.operand_count == 1);
@@ -123,33 +123,33 @@ int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos)
 int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-    NT_OpDef op_def = defs[op];
+    NT_OpDef op_def = code_defs[op];
 
     assert(op_def.operand_count == 2);
 
-    if (NT_Code_write_byte(ins, op) < 0)
+    if (code_write_byte(ins, op) < 0)
     {
         return -1;
     }
 
     assert(op_def.operand_widths[0] != 0);
-    if (NT_Code_write_operand(ins, op1, op_def.operand_widths[0]) < 0)
+    if (code_write_operand(ins, op1, op_def.operand_widths[0]) < 0)
     {
         return -1;
     }
 
     assert(op_def.operand_widths[1] != 0);
-    return NT_Code_write_operand(ins, op2, op_def.operand_widths[1]);
+    return code_write_operand(ins, op2, op_def.operand_widths[1]);
 }
 
-static int NT_Code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count)
+static int code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count)
 {
     uint8_t byte = 0;
 
     for (int byte_index = byte_count - 1; byte_index >= 0; byte_index--)
     {
         byte = (operand >> (byte_index * 8)) & 0xFF;
-        if (NT_Code_write_byte(ins, byte) < 0)
+        if (code_write_byte(ins, byte) < 0)
         {
             return -1;
         }
@@ -158,7 +158,7 @@ static int NT_Code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count)
     return 0;
 }
 
-static int NT_Code_write_byte(NT_Ins *ins, uint8_t byte)
+static int code_write_byte(NT_Ins *ins, uint8_t byte)
 {
     if (ins->size >= ins->capacity)
     {

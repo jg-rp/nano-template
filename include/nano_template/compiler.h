@@ -45,10 +45,6 @@ void NT_Compiler_free(NT_Compiler *c);
 /// @return 0 on success, -1 on failure with an exception set.
 int NT_Compiler_compile(NT_Compiler *c, NT_Node *node);
 
-/// @brief Compile `expr` and its children recursively.
-/// @return 0 on success, -1 on failure with an exception set.
-int NT_Compiler_compile_expression(NT_Compiler *c, NT_Expr *expr);
-
 /// @brief Move instructions and pools out of the compiler.
 /// @return A pointer to a new NT_Code that now owns compiled instructions and
 /// pools.

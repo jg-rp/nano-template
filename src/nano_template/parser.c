@@ -551,7 +551,7 @@ static NT_Node *NT_Parser_parse_output(NT_Parser *p)
         return NULL;
     }
 
-    NT_Node *node = NT_Parser_make_node(p, NODE_OUPUT);
+    NT_Node *node = NT_Parser_make_node(p, NODE_OUTPUT);
     if (!node)
     {
         return NULL;

@@ -2,47 +2,79 @@
 
 #include "nano_template/compiler.h"
 
+typedef int (*CompileNodeFn)(NT_Compiler *c, NT_Node *node);
+
+static int compile_node_root(NT_Compiler *c, NT_Node *node);
+static int compile_node_output(NT_Compiler *c, NT_Node *node);
+static int compile_node_if_tag(NT_Compiler *c, NT_Node *node);
+static int compile_node_for_tag(NT_Compiler *c, NT_Node *node);
+static int compile_node_text(NT_Compiler *c, NT_Node *node);
+
+static CompileNodeFn compile_node_table[] = {
+    [NODE_ROOT] = compile_node_root,     [NODE_OUTPUT] = compile_node_output,
+    [NODE_IF_TAG] = compile_node_if_tag, [NODE_FOR_TAG] = compile_node_for_tag,
+    [NODE_TEXT] = compile_node_text,
+};
+
+typedef int (*CompileExprFn)(NT_Compiler *c, NT_Expr *expr);
+
+static int compile_expr_not(NT_Compiler *c, NT_Expr *expr);
+static int compile_expr_and(NT_Compiler *c, NT_Expr *expr);
+static int compile_expr_or(NT_Compiler *c, NT_Expr *expr);
+static int compile_expr_str(NT_Compiler *c, NT_Expr *expr);
+static int compile_expr_var(NT_Compiler *c, NT_Expr *expr);
+
+static CompileExprFn compile_expr_table[] = {
+    [EXPR_NOT] = compile_expr_not, [EXPR_AND] = compile_expr_and,
+    [EXPR_OR] = compile_expr_or,   [EXPR_STR] = compile_expr_str,
+    [EXPR_VAR] = compile_expr_var,
+};
+
+/// @brief Compile `expr` and its children recursively.
+/// @return 0 on success, -1 on failure with an exception set.
+int compile_expression(NT_Compiler *c, NT_Expr *expr);
+
 /// @brief Enter a new local/block scope.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Compiler_enter_scope(NT_Compiler *c);
+static int compiler_enter_scope(NT_Compiler *c);
 
 /// Leave the current local/block scope.
-static void NT_Compiler_leave_scope(NT_Compiler *c);
+static void compiler_leave_scope(NT_Compiler *c);
 
 /// @brief Append `const` to the constant pool and set `out_index` to its index
 /// in the pool.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Compiler_add_constant(NT_Compiler *c, PyObject *constant,
-                                    size_t *out_index);
+static int compiler_add_constant(NT_Compiler *c, PyObject *constant,
+                                 size_t *out_index);
 
 /// Emit an instruction with no operands.
-static int NT_Compiler_emit(NT_Compiler *c, NT_Op op, size_t *out_pos);
+static int compiler_emit(NT_Compiler *c, NT_Op op, size_t *out_pos);
 
 /// Emit an instruction with one operand.
-static int NT_Compiler_emit1(NT_Compiler *c, NT_Op op, int operand,
-                             size_t *out_pos);
+static int compiler_emit1(NT_Compiler *c, NT_Op op, int operand,
+                          size_t *out_pos);
 
 /// Emit an instruction with two operands.
-static int NT_Compiler_emit2(NT_Compiler *c, NT_Op op, int op1, int op2,
-                             size_t *out_pos);
+static int compiler_emit2(NT_Compiler *c, NT_Op op, int op1, int op2,
+                          size_t *out_pos);
 
 /// @brief Change the instruction at `pos` to use `new_operand`.
 /// Only works for instructions with exactly one operand.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Compiler_change_operand(NT_Compiler *c, size_t pos,
-                                      int new_operand);
+static int compiler_change_operand(NT_Compiler *c, size_t pos,
+                                   int new_operand);
 
 /// @brief Add `name` to the symbol table for the current scope.
 /// @return 0 on success, -1 on failure with an exception set.
-static int NT_Compiler_define(NT_Compiler *c, PyObject *name, int *out_offset);
+static int compiler_define(NT_Compiler *c, PyObject *name, int *out_offset);
 
 /// @brief Resolve `name` in the current scope.
 /// If found, `out_depth` and `out_offset` will be set.
 /// @return 1 if `name` was found, 0 otherwise.
-static int NT_Compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
-                               int *out_offset);
+static int compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
+                            int *out_offset);
 
-static int NT_Compiler_compile_block(NT_Compiler *c, NT_Node *child);
+static int compiler_compile_block(NT_Compiler *c, NT_Node *node);
 
 NT_Compiler *NT_Compiler_new(void)
 {
@@ -113,7 +145,6 @@ void NT_Compiler_free(NT_Compiler *c)
     c->scope_capacity = 0;
 
     NT_Ins_free(c->ins);
-    PyMem_Free(c->ins);
     c->ins = NULL;
 
     PyMem_Free(c);
@@ -170,191 +201,242 @@ void NT_Code_free(NT_Code *code)
 
 int NT_Compiler_compile(NT_Compiler *c, NT_Node *node)
 {
-    size_t jump_not_truthy_pos = 0;
-    size_t after_block_pos = 0;
-    size_t *jump_positions = NULL;
-    size_t pos = 0;
-    size_t constant_index = 0;
+    CompileNodeFn fn = compile_node_table[node->kind];
 
-    switch (node->kind)
+    if (!fn)
     {
-    case NODE_TEXT:
-        if (NT_Compiler_add_constant(c, node->str, &constant_index) < 0)
-        {
-            goto fail;
-        }
-
-        if (NT_Compiler_emit1(c, NT_OP_TEXT, constant_index, &pos) < 0)
-        {
-            goto fail;
-        }
-        break;
-    case NODE_OUPUT:
-        if (NT_Compiler_compile_expression(c, node->expr) < 0)
-        {
-            goto fail;
-        }
-
-        if (NT_Compiler_emit(c, NT_OP_RENDER, &pos) < 0)
-        {
-            goto fail;
-        }
-        break;
-    case NODE_IF_TAG:
-        jump_positions = PyMem_Malloc(sizeof(int) * node->child_count);
-        if (!jump_positions)
-        {
-            goto fail;
-        }
-
-        int child_index = 0;
-        NT_Node *child = NULL;
-        NT_NodePage *page = node->head;
-
-        while (page)
-        {
-            for (Py_ssize_t i = 0; i < page->count; i++)
-            {
-                child = page->nodes[i];
-
-                if (child->kind == NODE_ELSE_BLOCK)
-                {
-                    if (NT_Compiler_compile_block(c, child) < 0)
-                    {
-                        goto fail;
-                    }
-                    goto after_else;
-                }
-
-                if (NT_Compiler_compile_expression(c, child->expr) < 0)
-                {
-                    goto fail;
-                }
-
-                if (NT_Compiler_emit1(c, NT_OP_JUMP_IF_FALSY, 9999,
-                                      &jump_not_truthy_pos) < 0)
-                {
-                    goto fail;
-                }
-
-                if (NT_Compiler_emit(c, NT_OP_POP, &pos) < 0)
-                {
-                    goto fail;
-                }
-
-                if (NT_Compiler_compile_block(c, child) < 0)
-                {
-                    goto fail;
-                }
-
-                jump_positions[child_index++] = pos;
-
-                if (NT_Compiler_change_operand(c, jump_not_truthy_pos,
-                                               c->ins->size) < 0)
-                {
-                    goto fail;
-                }
-
-                if (NT_Compiler_emit(c, NT_OP_POP, &pos) < 0)
-                {
-                    goto fail;
-                }
-            }
-
-            page = page->next;
-        }
-
-    after_else:
-
-        for (size_t i = 0; i < node->child_count; i++)
-        {
-            if (NT_Compiler_change_operand(c, jump_positions[i],
-                                           c->ins->size) < 0)
-            {
-                goto fail;
-            }
-        }
-
-        PyMem_Free(jump_positions);
-        jump_positions = NULL;
-        break;
-
-    case NODE_FOR_TAG:
-        // TODO:
-        NTPY_TODO_I();
-        break;
-    default:
-        // TODO:
-        NTPY_TODO_I();
-        break;
+        PyErr_Format(PyExc_RuntimeError, "unexpected node %s %d",
+                     NT_NodeKind_str(node->kind), node->kind);
+        return -1;
     }
 
-fail:
-    PyMem_Free(jump_positions);
-    jump_positions = NULL;
-    return -1;
+    return fn(c, node);
 }
 
-int NT_Compiler_compile_expression(NT_Compiler *c, NT_Expr *expr)
+int compile_expression(NT_Compiler *c, NT_Expr *expr)
 {
-    size_t pos = 0;
+    CompileExprFn fn = compile_expr_table[expr->kind];
+
+    if (!fn)
+    {
+        PyErr_Format(PyExc_RuntimeError, "unknown expression kind %d",
+                     expr->kind);
+        return -1;
+    }
+
+    return fn(c, expr);
+}
+
+static int compiler_compile_block(NT_Compiler *c, NT_Node *node)
+{
+    NT_NodePage *page = node->head;
+    while (page)
+    {
+        for (Py_ssize_t i = 0; i < page->count; i++)
+        {
+            if (NT_Compiler_compile(c, page->nodes[i]) < 0)
+            {
+                return -1;
+            }
+        }
+        page = page->next;
+    }
+
+    return 0;
+}
+
+static int compile_node_root(NT_Compiler *c, NT_Node *node)
+{
+    return compiler_compile_block(c, node);
+}
+
+static int compile_node_output(NT_Compiler *c, NT_Node *node)
+{
+    size_t instruction_position = 0;
+
+    if (compile_expression(c, node->expr) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit(c, NT_OP_RENDER, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int compile_node_if_tag(NT_Compiler *c, NT_Node *node)
+{
+    size_t instruction_position = 0;
+    size_t jump_not_truthy_pos = 0;
+    size_t *jump_positions = NULL;
+    int result = -1;
+
+    jump_positions = PyMem_Malloc(sizeof(int) * node->child_count);
+    if (!jump_positions)
+    {
+        goto cleanup;
+    }
+
+    int child_index = 0;
+    NT_Node *child = NULL;
+
+    for (NT_NodePage *page = node->head; page; page = page->next)
+    {
+        for (Py_ssize_t i = 0; i < page->count; i++)
+        {
+            child = page->nodes[i];
+
+            if (child->kind == NODE_ELSE_BLOCK)
+            {
+                if (compiler_compile_block(c, child) < 0)
+                {
+                    goto cleanup;
+                }
+                goto after_else;
+            }
+
+            if (compile_expression(c, child->expr) < 0)
+            {
+                goto cleanup;
+            }
+
+            if (compiler_emit1(c, NT_OP_JUMP_IF_FALSY, 9999,
+                               &jump_not_truthy_pos) < 0)
+            {
+                goto cleanup;
+            }
+
+            if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+            {
+                goto cleanup;
+            }
+
+            if (compiler_compile_block(c, child) < 0)
+            {
+                goto cleanup;
+            }
+
+            jump_positions[child_index++] = instruction_position;
+
+            if (compiler_change_operand(c, jump_not_truthy_pos, c->ins->size) <
+                0)
+            {
+                goto cleanup;
+            }
+
+            if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+            {
+                goto cleanup;
+            }
+        }
+    }
+
+after_else:
+
+    for (int i = 0; i < child_index; i++)
+    {
+        if (compiler_change_operand(c, jump_positions[i], c->ins->size) < 0)
+        {
+            goto cleanup;
+        }
+    }
+
+    result = 0;
+
+cleanup:
+    PyMem_Free(jump_positions);
+    jump_positions = NULL;
+    return result;
+}
+
+static int compile_node_for_tag(NT_Compiler *c, NT_Node *node)
+{
+    size_t instruction_position = 0;
+    // TODO:
+    NTPY_TODO_I();
+    return 0;
+}
+
+static int compile_node_text(NT_Compiler *c, NT_Node *node)
+{
+    size_t instruction_position = 0;
+    size_t constant_index = 0;
+
+    if (compiler_add_constant(c, node->str, &constant_index) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit1(c, NT_OP_TEXT, constant_index, &instruction_position) <
+        0)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int compile_expr_not(NT_Compiler *c, NT_Expr *expr)
+{
+    // TODO
+    NTPY_TODO_I();
+}
+
+static int compile_expr_and(NT_Compiler *c, NT_Expr *expr)
+{
+    // TODO
+    NTPY_TODO_I();
+}
+
+static int compile_expr_or(NT_Compiler *c, NT_Expr *expr)
+{
+    // TODO
+    NTPY_TODO_I();
+}
+
+static int compile_expr_str(NT_Compiler *c, NT_Expr *expr)
+{
+    // TODO
+    NTPY_TODO_I();
+}
+
+static int compile_expr_var(NT_Compiler *c, NT_Expr *expr)
+{
+    size_t instruction_position = 0;
     size_t constant_index = 0;
     int local_depth = 0;
     int local_offset = 0;
 
-    switch (expr->kind)
+    if (compiler_resolve(c, expr->head->objs[0], &local_depth, &local_offset))
     {
-    case EXPR_VAR:
-        if (NT_Compiler_resolve(c, expr->head->objs[0], &local_depth,
-                                &local_offset))
+        if (compiler_emit2(c, NT_OP_GET_LOCAL, local_depth, local_offset,
+                           &instruction_position) < 0)
         {
-            if (NT_Compiler_emit2(c, NT_OP_GET_LOCAL, local_depth,
-                                  local_offset, &pos) < 0)
-            {
-                goto fail;
-            }
+            return -1;
         }
-        else
+    }
+    else
+    {
+        if (compiler_add_constant(c, expr->head->objs[0], &constant_index) < 0)
         {
-            if (NT_Compiler_add_constant(c, expr->head->objs[0],
-                                         &constant_index) < 0)
-            {
-                goto fail;
-            }
-
-            if (NT_Compiler_emit1(c, NT_OP_GLOBAL, constant_index, &pos) < 0)
-            {
-                goto fail;
-            }
+            return -1;
         }
 
-        // TODO: OP_SELECTOR for each subsequent selector.
-        break;
-    case EXPR_STR:
-    case EXPR_AND:
-    case EXPR_OR:
-    case EXPR_NOT:
-        // TODO:
-        NTPY_TODO_I();
-    default:
-        // TODO:
-        NTPY_TODO_I();
-        break;
+        if (compiler_emit1(c, NT_OP_GLOBAL, constant_index,
+                           &instruction_position) < 0)
+        {
+            return -1;
+        }
     }
 
+    // TODO: OP_SELECTOR for each subsequent selector.
     return 0;
-
-fail:
-    return -1;
 }
 
-static int NT_Compiler_compile_block(NT_Compiler *c, NT_Node *child)
-{
-    // TODO:
-    NTPY_TODO_I();
-}
-
-static int NT_Compiler_enter_scope(NT_Compiler *c)
+static int compiler_enter_scope(NT_Compiler *c)
 {
     if (c->scope_top >= c->scope_capacity)
     {
@@ -382,7 +464,7 @@ static int NT_Compiler_enter_scope(NT_Compiler *c)
     return 0;
 }
 
-static void NT_Compiler_leave_scope(NT_Compiler *c)
+static void compiler_leave_scope(NT_Compiler *c)
 {
     assert(c->scope_top > 0);
     c->scope_top -= 1;
@@ -390,8 +472,8 @@ static void NT_Compiler_leave_scope(NT_Compiler *c)
     c->scope[c->scope_top] = NULL;
 }
 
-static int NT_Compiler_add_constant(NT_Compiler *c, PyObject *constant,
-                                    size_t *out_index)
+static int compiler_add_constant(NT_Compiler *c, PyObject *constant,
+                                 size_t *out_index)
 {
     if (c->constant_pool_size >= c->constant_pool_capacity)
     {
@@ -419,35 +501,34 @@ static int NT_Compiler_add_constant(NT_Compiler *c, PyObject *constant,
     return 0;
 }
 
-static int NT_Compiler_emit(NT_Compiler *c, NT_Op op, size_t *out_pos)
+static int compiler_emit(NT_Compiler *c, NT_Op op, size_t *out_pos)
 {
     *out_pos = c->ins->size;
     return NT_Ins_pack(c->ins, op);
 }
 
-static int NT_Compiler_emit1(NT_Compiler *c, NT_Op op, int operand,
-                             size_t *out_pos)
+static int compiler_emit1(NT_Compiler *c, NT_Op op, int operand,
+                          size_t *out_pos)
 {
     *out_pos = c->ins->size;
     return NT_Ins_pack1(c->ins, op, operand);
 }
 
-static int NT_Compiler_emit2(NT_Compiler *c, NT_Op op, int op1, int op2,
-                             size_t *out_pos)
+static int compiler_emit2(NT_Compiler *c, NT_Op op, int op1, int op2,
+                          size_t *out_pos)
 {
     *out_pos = c->ins->size;
     return NT_Ins_pack2(c->ins, op, op1, op2);
 }
 
-static int NT_Compiler_change_operand(NT_Compiler *c, size_t pos,
-                                      int new_operand)
+static int compiler_change_operand(NT_Compiler *c, size_t pos, int new_operand)
 {
     uint8_t byte = c->ins->bytes[pos];
     assert(byte > 0 && byte <= NT_OP_TRUE);
     return NT_Ins_replace(c->ins, byte, new_operand, pos);
 }
 
-static int NT_Compiler_define(NT_Compiler *c, PyObject *name, int *out_offset)
+static int compiler_define(NT_Compiler *c, PyObject *name, int *out_offset)
 {
     PyObject *offset = NULL;
     PyObject *scope = c->scope[c->scope_top - 1];
@@ -474,8 +555,8 @@ fail:
     return -1;
 }
 
-static int NT_Compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
-                               int *out_offset)
+static int compiler_resolve(NT_Compiler *c, PyObject *name, int *out_depth,
+                            int *out_offset)
 {
     PyObject *offset = NULL;
 

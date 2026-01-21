@@ -198,8 +198,7 @@ static PyObject *eval_var_expr(const NT_Expr *expr, NT_RenderContext *ctx)
         goto cleanup;
     }
 
-    NT_ObjPage *page = expr->head;
-    while (page)
+    for (NT_ObjPage *page = expr->head; page; page = page->next)
     {
         for (size_t i = 1; i < page->count; i++)
         {
@@ -213,8 +212,6 @@ static PyObject *eval_var_expr(const NT_Expr *expr, NT_RenderContext *ctx)
                 goto cleanup;
             }
         }
-
-        page = page->next;
     }
 
     result = Py_NewRef(op);
@@ -231,7 +228,6 @@ static PyObject *undefined(const NT_Expr *expr, NT_RenderContext *ctx,
     PyObject *list = NULL;
     PyObject *args = NULL;
     PyObject *result = NULL;
-    NT_ObjPage *page = NULL;
 
     token_view = NTPY_TokenView_new(ctx->str, expr->token->start,
                                     expr->token->end, expr->token->kind);
@@ -248,9 +244,8 @@ static PyObject *undefined(const NT_Expr *expr, NT_RenderContext *ctx,
     }
 
     size_t pos = 0;
-    page = expr->head;
 
-    while (page)
+    for (NT_ObjPage *page = expr->head; page; page = page->next)
     {
         for (size_t i = 0; i <= page->count; i++)
         {
@@ -266,8 +261,6 @@ static PyObject *undefined(const NT_Expr *expr, NT_RenderContext *ctx,
 
             pos++;
         }
-
-        page = page->next;
     }
 
 end:

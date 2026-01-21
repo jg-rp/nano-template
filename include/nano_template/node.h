@@ -12,7 +12,7 @@
 typedef enum
 {
     NODE_ROOT = 1,
-    NODE_OUPUT,
+    NODE_OUTPUT,
     NODE_IF_TAG,
     NODE_FOR_TAG,
     NODE_IF_BLOCK,
@@ -21,6 +21,27 @@ typedef enum
     NODE_ELSE_BLOCK,
     NODE_TEXT
 } NT_NodeKind;
+
+static const char *NT_NodeKind_names[] = {
+    [NODE_ROOT] = "NODE_ROOT",
+    [NODE_OUTPUT] = "NODE_OUTPUT",
+    [NODE_IF_TAG] = "NODE_IF_TAG",
+    [NODE_FOR_TAG] = "NODE_FOR_TAG",
+    [NODE_IF_BLOCK] = "NODE_IF_BLOCK",
+    [NODE_FOR_BLOCK] = "NODE_FOR_BLOCK",
+    [NODE_ELIF_BLOCK] = "NODE_ELIF_BLOCK",
+    [NODE_ELSE_BLOCK] = "NODE_ELSE_BLOCK",
+    [NODE_TEXT] = "NODE_TEXT",
+};
+
+static inline const char *NT_NodeKind_str(NT_NodeKind kind)
+{
+    if (kind >= NODE_ROOT && kind <= NODE_TEXT)
+    {
+        return NT_NodeKind_names[kind];
+    }
+    return "NODE_UNKNOWN";
+}
 
 /// @brief One block of a paged array (unrolled linked list) holding AST nodes.
 typedef struct NT_NodePage

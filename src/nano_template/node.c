@@ -20,7 +20,7 @@ static int render_text(const NT_Node *node, NT_RenderContext *ctx,
                        PyObject *buf);
 
 static RenderFn render_table[] = {
-    [NODE_OUPUT] = render_output,
+    [NODE_OUTPUT] = render_output,
     [NODE_IF_TAG] = render_if_tag,
     [NODE_FOR_TAG] = render_for_tag,
     [NODE_TEXT] = render_text,
@@ -92,9 +92,8 @@ static int render_if_tag(const NT_Node *node, NT_RenderContext *ctx,
 {
     int rv = 0;
     NT_Node *child = NULL;
-    NT_NodePage *page = node->head;
 
-    while (page)
+    for (NT_NodePage *page = node->head; page; page = page->next)
     {
         for (Py_ssize_t i = 0; i < page->count; i++)
         {
@@ -114,8 +113,6 @@ static int render_if_tag(const NT_Node *node, NT_RenderContext *ctx,
 
             return rv;
         }
-
-        page = page->next;
     }
 
     return 0;
@@ -245,8 +242,7 @@ static int render_text(const NT_Node *node, NT_RenderContext *ctx,
 
 static int render_block(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
 {
-    NT_NodePage *page = node->head;
-    while (page)
+    for (NT_NodePage *page = node->head; page; page = page->next)
     {
         for (Py_ssize_t i = 0; i < page->count; i++)
         {
@@ -255,7 +251,6 @@ static int render_block(NT_Node *node, NT_RenderContext *ctx, PyObject *buf)
                 return -1;
             }
         }
-        page = page->next;
     }
 
     return 0;

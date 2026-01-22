@@ -3,17 +3,17 @@ from nano_template import _bytecode
 from tests._bytecode import Op
 import tests._bytecode as code
 
-source = "Hello, World"
+source = "{{ a.b }}"
 bytecode = _bytecode(source)
 print(bytecode.instructions)
 print(bytecode.constants)
 
 print(code.to_str(bytecode.instructions))
 
-
-ins = [
-    code.make(Op.TEXT, 0),
+expected_instructions = [
+    code.make(Op.GLOBAL, 0),
+    code.make(Op.SELECTOR, 1),
+    code.make(Op.RENDER),
 ]
-
-print(ins)
-print(repr(b"".join(ins)))
+print("\n")
+print(code.to_str(b"".join(expected_instructions)))

@@ -4,46 +4,46 @@ from . import _bytecode as code
 from ._bytecode import Op
 
 
+def disassemble(instructions: list[bytes] | bytes) -> str:
+    if isinstance(instructions, list):
+        return code.to_str(b"".join(instructions))
+    return code.to_str(instructions)
+
+
 def test_just_text() -> None:
-    source = "Hello, World!"
-
-    expected_instructions = [code.make(Op.TEXT, 0)]
-    expected_constants = ["Hello, World!"]
-
-    bytecode = _bytecode(source)
-
-    assert code.to_str(b"".join(expected_instructions)) == code.to_str(
-        bytecode.instructions
-    )
-
-    assert expected_constants == bytecode.constants
+    bytecode = _bytecode("Hello, World!")
+    assert disassemble(bytecode.instructions) == disassemble([code.make(Op.TEXT, 0)])
+    assert bytecode.constants == ["Hello, World!"]
 
 
 def test_empty_template() -> None:
-    source = ""
-
-    expected_instructions: list[bytes] = []
-    expected_constants = []
-
-    bytecode = _bytecode(source)
-
-    assert code.to_str(b"".join(expected_instructions)) == code.to_str(
-        bytecode.instructions
-    )
-
-    assert expected_constants == bytecode.constants
+    bytecode = _bytecode("")
+    assert disassemble(bytecode.instructions) == disassemble([])
+    assert bytecode.constants == []
 
 
 def test_just_output() -> None:
-    source = "{{ a }}"
+    bytecode = _bytecode("{{ a }}")
 
-    expected_instructions = [code.make(Op.GLOBAL, 0), code.make(Op.RENDER)]
-    expected_constants = ["a"]
-
-    bytecode = _bytecode(source)
-
-    assert code.to_str(b"".join(expected_instructions)) == code.to_str(
-        bytecode.instructions
+    assert disassemble(bytecode.instructions) == disassemble(
+        [
+            code.make(Op.GLOBAL, 0),
+            code.make(Op.RENDER),
+        ]
     )
 
-    assert expected_constants == bytecode.constants
+    assert bytecode.constants == ["a"]
+
+
+def test_just_output_dotted_path() -> None:
+    bytecode = _bytecode("{{ a.b }}")
+
+    assert disassemble(bytecode.instructions) == disassemble(
+        [
+            code.make(Op.GLOBAL, 0),
+            code.make(Op.SELECTOR, 1),
+            code.make(Op.RENDER),
+        ]
+    )
+
+    assert bytecode.constants == ["a", "b"]

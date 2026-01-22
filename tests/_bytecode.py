@@ -51,7 +51,7 @@ def make(op: int, *operands: int) -> bytes:
     for operand, byte_count in zip(
         operands, op_def.operand_widths[: op_def.operand_count]
     ):
-        for byte_index in range(byte_count, 0, -1):
+        for byte_index in range(byte_count - 1, -1, -1):
             instruction.append((operand >> (byte_index * 8)) & 0xFF)
 
     return bytes(instruction)

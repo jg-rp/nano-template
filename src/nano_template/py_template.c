@@ -70,10 +70,7 @@ static PyObject *NTPY_Template_render(PyObject *self, PyObject *globals)
         goto fail;
     }
 
-    NT_Node *root = op->root;
-    NT_NodePage *page = root->head;
-
-    while (page)
+    for (NT_NodePage *page = op->root->head; page; page = page->next)
     {
         for (Py_ssize_t i = 0; i < page->count; i++)
         {
@@ -82,8 +79,6 @@ static PyObject *NTPY_Template_render(PyObject *self, PyObject *globals)
                 goto fail;
             }
         }
-
-        page = page->next;
     }
 
     rv = StringBuffer_finish(buf);

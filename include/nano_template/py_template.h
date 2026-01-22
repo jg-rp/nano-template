@@ -7,6 +7,8 @@
 #include "nano_template/common.h"
 #include "nano_template/node.h"
 
+/// @brief A parsed template that can be rendered with a tree-walking
+/// interpreter.
 typedef struct NTPY_Template
 {
     PyObject_HEAD

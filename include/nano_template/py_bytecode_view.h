@@ -19,6 +19,8 @@ PyObject *NTPY_BytecodeView_new(NT_Code *code);
 /// @return A bytecode view suitable for testing.
 PyObject *NTPY_bytecode(PyObject *Py_UNUSED(self), PyObject *str);
 
+PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self));
+
 int nt_register_bytecode_view_type(PyObject *module);
 
 #endif

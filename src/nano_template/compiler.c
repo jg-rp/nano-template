@@ -354,9 +354,173 @@ cleanup:
 
 static int compile_node_for_tag(NT_Compiler *c, NT_Node *node)
 {
+    assert(node->child_count == 1 || node->child_count == 2);
+    bool has_default = node->child_count == 2;
+
+    // One or two frame local slots. One for the loop variable, one for a
+    // hidden "did iterate" flag if we don't have an `else` block.
+    int number_of_slots = has_default ? 2 : 1;
+
     size_t instruction_position = 0;
-    // TODO:
-    NTPY_TODO_I();
+    size_t loop_var_offset = 0;
+    size_t loop_start_position = 0;
+    size_t jump_if_false_position = 0;
+    size_t jump_if_did_iterate_position = 0;
+
+    if (compiler_enter_scope(c) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_define(c, node->str, &loop_var_offset) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit1(c, NT_OP_ENTER_FRAME, number_of_slots,
+                       &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (has_default)
+    {
+        // Hidden `did iterate` flag.
+        if (compiler_emit(c, NT_OP_FALSE, &instruction_position) < 0)
+        {
+            return -1;
+        }
+
+        if (compiler_emit1(c, NT_OP_SET_LOCAL, 1, &instruction_position) < 0)
+        {
+            return -1;
+        }
+    }
+
+    if (compile_expression(c, node->expr) < 0)
+    {
+        return -1;
+    }
+
+    // Replace stack top with an iterable.
+    if (compiler_emit(c, NT_OP_ITER_INIT, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    loop_start_position = c->ins->size;
+
+    if (compiler_emit(c, NT_OP_ITER_NEXT, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit1(c, NT_OP_JUMP_IF_FALSY, 9999, &jump_if_false_position) <
+        0)
+    {
+        return -1;
+    }
+
+    // has_value
+    if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (has_default)
+    {
+        // Update did_iterate flag.
+        if (compiler_emit(c, NT_OP_TRUE, &instruction_position) < 0)
+        {
+            return -1;
+        }
+
+        if (compiler_emit1(c, NT_OP_SET_LOCAL, 1, &instruction_position) < 0)
+        {
+            return -1;
+        }
+    }
+
+    if (compiler_emit1(c, NT_OP_SET_LOCAL, loop_var_offset,
+                       &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_compile_block(c, node->head->nodes[0]) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_emit1(c, NT_OP_JUMP, loop_start_position,
+                       &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (compiler_change_operand(c, jump_if_false_position, c->ins->size) < 0)
+    {
+        return -1;
+    }
+
+    // has_value
+    if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    // iterator
+    if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    if (has_default)
+    {
+        // did_iterate
+        if (compiler_emit2(c, NT_OP_GET_LOCAL, 0, 1, &instruction_position) <
+            0)
+        {
+            return -1;
+        }
+
+        if (compiler_emit1(c, NT_OP_JUMP_IF_TRUTHY, 9999,
+                           &jump_if_did_iterate_position) < 0)
+        {
+            return -1;
+        }
+
+        // did_iterate
+        if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+        {
+            return -1;
+        }
+
+        if (compiler_compile_block(c, node->head->nodes[1]) < 0)
+        {
+            return -1;
+        }
+
+        if (compiler_change_operand(c, jump_if_did_iterate_position,
+                                    c->ins->size) < 0)
+        {
+            return -1;
+        }
+
+        // did_iterate
+        if (compiler_emit(c, NT_OP_POP, &instruction_position) < 0)
+        {
+            return -1;
+        }
+    }
+
+    if (compiler_emit(c, NT_OP_LEAVE_FRAME, &instruction_position) < 0)
+    {
+        return -1;
+    }
+
+    compiler_leave_scope(c);
+
     return 0;
 }
 

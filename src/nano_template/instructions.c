@@ -11,29 +11,6 @@ static int code_write_byte(NT_Ins *ins, uint8_t byte);
 /// @return 0 on success, -1 on failure with an exception set.
 static int code_write_operand(NT_Ins *ins, int operand, uint8_t byte_count);
 
-/// @brief A table of opcode constants and their definitions.
-static NT_OpDef code_defs[] = {
-    [NT_OP_NULL] = {"OpNull", {0, 0}, 0, 1},
-    [NT_OP_CONSTANT] = {"OpConstant", {2, 0}, 1, 3},
-    [NT_OP_ENTER_FRAME] = {"OpEnterFrame", {1, 0}, 1, 2},
-    [NT_OP_FALSE] = {"OpFalse", {0, 0}, 0, 1},
-    [NT_OP_GET_LOCAL] = {"OpGetLocal", {1, 1}, 2, 3},
-    [NT_OP_GLOBAL] = {"OpGlobal", {2, 0}, 1, 3},
-    [NT_OP_ITER_INIT] = {"OpIterInit", {0, 0}, 0, 1},
-    [NT_OP_ITER_NEXT] = {"OpIterNext", {0, 0}, 0, 1},
-    [NT_OP_JUMP_IF_FALSY] = {"OpJumpIfFalsy", {2, 0}, 1, 3},
-    [NT_OP_JUMP_IF_TRUTHY] = {"OpJumpIfTruthy", {2, 0}, 1, 3},
-    [NT_OP_JUMP] = {"OpJump", {0, 0}, 0, 1},
-    [NT_OP_LEAVE_FRAME] = {"OpLeaveFrame", {0, 0}, 0, 1},
-    [NT_OP_NOT] = {"OpNot", {0, 0}, 0, 1},
-    [NT_OP_POP] = {"OpPop", {0, 0}, 0, 1},
-    [NT_OP_RENDER] = {"OpRender", {0, 0}, 0, 1},
-    [NT_OP_SELECTOR] = {"OpSelector", {2, 0}, 1, 3},
-    [NT_OP_SET_LOCAL] = {"OpSetLocal", {1, 0}, 1, 2},
-    [NT_OP_TEXT] = {"OpText", {2, 0}, 1, 3},
-    [NT_OP_TRUE] = {"OpTrue", {0, 0}, 0, 1},
-};
-
 NT_Ins *NT_Ins_new()
 {
     NT_Ins *code = PyMem_Malloc(sizeof(NT_Ins));

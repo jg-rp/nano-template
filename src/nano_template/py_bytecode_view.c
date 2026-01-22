@@ -123,6 +123,57 @@ static PyType_Spec NTPY_BytecodeView_spec = {
     .slots = NTPY_BytecodeView_slots,
 };
 
+PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self))
+{
+    PyObject *result = NULL;
+    PyObject *def = NULL;
+    PyObject *widths = NULL;
+
+    PyObject *defs = PyList_New(19);
+    if (!defs)
+    {
+        return NULL;
+    }
+
+    for (NT_Op op = NT_OP_NULL; op <= NT_OP_TRUE; op++)
+    {
+        NT_OpDef op_def = code_defs[op];
+
+        widths = Py_BuildValue("(BB)", op_def.operand_widths[0],
+                               op_def.operand_widths[1]);
+
+        if (!widths)
+        {
+            goto cleanup;
+        }
+
+        def = Py_BuildValue("(sNBB)", op_def.name, widths,
+                            op_def.operand_count, op_def.width);
+
+        if (!def)
+        {
+            goto cleanup;
+        }
+
+        if (PyList_SetItem(defs, op, def) < 0)
+        {
+            goto cleanup;
+        }
+
+        widths = NULL;
+        def = NULL;
+    }
+
+    result = defs;
+    defs = NULL;
+
+cleanup:
+    Py_XDECREF(defs);
+    Py_XDECREF(widths);
+    Py_XDECREF(def);
+    return result;
+}
+
 PyObject *NTPY_bytecode(PyObject *Py_UNUSED(self), PyObject *str)
 {
     Py_ssize_t token_count = 0;

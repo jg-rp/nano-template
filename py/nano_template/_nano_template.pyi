@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Callable
 from typing import Type
+from typing import TypeAlias
 from ._undefined import Undefined
 
 class TokenView:
@@ -36,3 +37,7 @@ class BytecodeView:
     def constants(self) -> list[object]: ...
 
 def bytecode(source: str) -> BytecodeView: ...
+
+OpDef: TypeAlias = tuple[str, tuple[int, int], int, int]
+
+def bytecode_definitions() -> list[OpDef]: ...

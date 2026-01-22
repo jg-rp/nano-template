@@ -362,10 +362,10 @@ static int compile_node_for_tag(NT_Compiler *c, NT_Node *node)
     int number_of_slots = has_default ? 2 : 1;
 
     size_t instruction_position = 0;
-    size_t loop_var_offset = 0;
     size_t loop_start_position = 0;
     size_t jump_if_false_position = 0;
     size_t jump_if_did_iterate_position = 0;
+    int loop_var_offset = 0;
 
     if (compiler_enter_scope(c) < 0)
     {

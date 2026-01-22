@@ -41,6 +41,7 @@ typedef struct NT_OpDef
 } NT_OpDef;
 
 /// @brief A table of opcode constants and their definitions.
+/// Remember to update NTPY_bytecode_definitions if you change this.
 static NT_OpDef code_defs[] = {
     [NT_OP_NULL] = {"OpNull", {0, 0}, 0, 1},
     [NT_OP_CONSTANT] = {"OpConstant", {2, 0}, 1, 3},

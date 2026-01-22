@@ -123,7 +123,8 @@ static PyType_Spec NTPY_BytecodeView_spec = {
     .slots = NTPY_BytecodeView_slots,
 };
 
-PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self))
+PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self),
+                                    PyObject *Py_UNUSED(ignored))
 {
     PyObject *result = NULL;
     PyObject *def = NULL;

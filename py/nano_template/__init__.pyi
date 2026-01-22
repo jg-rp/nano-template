@@ -8,6 +8,7 @@ from ._nano_template import BytecodeView as _BytecodeView
 from ._nano_template import TokenView as _TokenView
 from ._nano_template import bytecode as _bytecode
 from ._nano_template import tokenize as _tokenize
+from ._nano_template import bytecode_definitions as _bytecode_definitions
 from ._token_kind import TokenKind as _TokenKind
 from ._undefined import Undefined
 from ._undefined import StrictUndefined
@@ -17,6 +18,7 @@ from ._exceptions import UndefinedVariableError
 
 __all__ = (
     "_bytecode",
+    "_bytecode_definitions",
     "_tokenize",
     "_TokenKind",
     "_TokenView",

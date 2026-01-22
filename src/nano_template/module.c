@@ -14,6 +14,8 @@ static PyMethodDef nano_template_methods[] = {
      PyDoc_STR("tokenize(str) -> list[TokenView]")},
     {"bytecode", NTPY_bytecode, METH_O,
      PyDoc_STR("bytecode(str) -> BytecodeView")},
+    {"bytecode_definitions", NTPY_bytecode_definitions, METH_NOARGS,
+     PyDoc_STR("bytecode_definitions() -> list[OpDef]")},
     {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef nano_template_module = {

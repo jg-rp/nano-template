@@ -41,7 +41,7 @@ OP_DEFS: list[OpDef] = [OpDef(*d) for d in _bytecode_definitions()]
 def make(op: int, *operands: int) -> bytes:
     """Make a single bytecode instruction."""
     op_def = OP_DEFS[op]
-    instruction: list[int] = [op]
+    instruction: list[int] = [int(op)]
 
     if len(operands) != op_def.operand_count:
         raise ValueError(
@@ -51,7 +51,7 @@ def make(op: int, *operands: int) -> bytes:
     for operand, byte_count in zip(
         operands, op_def.operand_widths[: op_def.operand_count]
     ):
-        for byte_index in range(byte_count, -1, -1):
+        for byte_index in range(byte_count, 0, -1):
             instruction.append((operand >> (byte_index * 8)) & 0xFF)
 
     return bytes(instruction)

@@ -272,9 +272,10 @@ static int compile_node_if_tag(NT_Compiler *c, NT_Node *node)
     size_t instruction_position = 0;
     size_t jump_not_truthy_pos = 0;
     size_t *jump_positions = NULL;
+    size_t after_else_position = 0;
     int result = -1;
 
-    jump_positions = PyMem_Malloc(sizeof(int) * node->child_count);
+    jump_positions = PyMem_Malloc(sizeof(size_t) * node->child_count);
     if (!jump_positions)
     {
         goto cleanup;
@@ -319,6 +320,11 @@ static int compile_node_if_tag(NT_Compiler *c, NT_Node *node)
                 goto cleanup;
             }
 
+            if (compiler_emit1(c, NT_OP_JUMP, 9999, &instruction_position) < 0)
+            {
+                goto cleanup;
+            }
+
             jump_positions[child_index++] = instruction_position;
 
             if (compiler_change_operand(c, jump_not_truthy_pos, c->ins->size) <
@@ -336,9 +342,12 @@ static int compile_node_if_tag(NT_Compiler *c, NT_Node *node)
 
 after_else:
 
+    after_else_position = c->ins->size;
+
     for (int i = 0; i < child_index; i++)
     {
-        if (compiler_change_operand(c, jump_positions[i], c->ins->size) < 0)
+        if (compiler_change_operand(c, jump_positions[i],
+                                    after_else_position) < 0)
         {
             goto cleanup;
         }

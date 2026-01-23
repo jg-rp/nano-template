@@ -33,7 +33,7 @@ typedef struct NT_VM
 /// @brief Allocate and initialize a new virtual machine.
 /// Moves instructions and constants out of `code`.
 /// @return The new virtual machine, or NULL on failure with an exception set.
-NT_VM *NT_VM_new(NT_Code *code);
+NT_VM *NT_VM_new(NT_Code *code, PyObject *serializer, PyObject *undefined);
 
 void NT_VM_free(NT_VM *vm);
 

@@ -47,7 +47,7 @@ static OpFn vm_op_table[] = {
 };
 
 /// @brief Read a single operand at offset `offset`.
-static int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset);
+static u_int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset);
 
 /// @brief Write `obj` to the output buffer.
 static int vm_render(NT_VM *vm, PyObject *obj);
@@ -92,7 +92,7 @@ NT_VM *NT_VM_new(NT_Code *code, PyObject *serializer, PyObject *undefined)
         goto cleanup;
     }
 
-    frames = PyMem_Malloc(sizeof(size_t) * NT_VM_MAX_FRAMES);
+    frames = PyMem_Calloc(NT_VM_MAX_FRAMES, sizeof(size_t));
     if (!frames)
     {
         goto cleanup;
@@ -234,11 +234,11 @@ PyObject *NT_VM_join(NT_VM *vm)
     return result;
 }
 
-int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset)
+u_int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset)
 {
     assert(offset + byte_count - 1 < vm->instructions_size);
 
-    int value = 0;
+    u_int value = 0;
     for (int i = 0; i < byte_count; i++)
     {
         value = (value << 8) | vm->instructions[offset + i];
@@ -280,7 +280,8 @@ static PyObject *vm_pop(NT_VM *vm)
     PyObject *obj = vm->stack[vm->sp];
     if (!obj)
     {
-        PyErr_SetString(PyExc_RuntimeError, "unexpected pop of null pointer");
+        PyErr_Format(PyExc_RuntimeError,
+                     "unexpected pop of null pointer (sp=%zu)", vm->sp);
     }
 
     vm->stack[vm->sp] = NULL;
@@ -294,7 +295,7 @@ static PyObject *vm_peek(NT_VM *vm)
 
 static size_t vm_current_frame(NT_VM *vm)
 {
-    return vm->frames[vm->fp];
+    return vm->frames[vm->fp - 1];
 }
 
 static int vm_push_frame(NT_VM *vm, size_t frame)
@@ -317,7 +318,7 @@ static int vm_noop(NT_VM *Py_UNUSED(vm), size_t *Py_UNUSED(ip),
 
 static int vm_op_text(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     if (vm_render(vm, vm->constant_pool[constant_index]) < 0)
     {
@@ -369,7 +370,7 @@ static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     if (vm_push(vm, vm->constant_pool[constant_index]) < 0)
     {
@@ -382,7 +383,7 @@ static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_global(NT_VM *vm, size_t *ip, PyObject *data)
 {
-    int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     PyObject *obj = PyObject_GetItem(data, vm->constant_pool[constant_index]);
     if (!obj)
@@ -402,7 +403,7 @@ static int vm_op_global(NT_VM *vm, size_t *ip, PyObject *data)
 
 static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     PyObject *obj = vm_pop(vm);
     if (!obj)
@@ -557,13 +558,16 @@ static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
     {
         if (PyErr_Occurred())
         {
-            return -1;
+            PyErr_Clear();
         }
 
         if (vm_push(vm, Py_False) < 0)
         {
             return -1;
         }
+
+        *ip += 1;
+        return 0;
     }
 
     if (vm_push(vm, value) < 0)
@@ -585,7 +589,7 @@ static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_enter_frame(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    int n_locals = vm_read_operand(vm, 1, vm->sp + 1);
+    u_int n_locals = vm_read_operand(vm, 1, *ip + 1);
 
     if (vm_push_frame(vm, vm->sp) < 0)
     {
@@ -665,6 +669,19 @@ static int vm_iter(PyObject *op, PyObject **out_iter)
         PyErr_Clear();
     }
 
-    *out_iter = PyList_New(0);
+    PyObject *empty = PyList_New(0);
+    if (!empty)
+    {
+        return -1;
+    }
+
+    *out_iter = PyObject_GetIter(empty);
+    if (!out_iter)
+    {
+        Py_DECREF(empty);
+        return -1;
+    }
+
+    Py_DECREF(empty);
     return 0;
 }

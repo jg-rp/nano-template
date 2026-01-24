@@ -38,7 +38,7 @@ void NTPY_CompiledTemplate_free(PyObject *self)
     NTPY_CompiledTemplate *op = (NTPY_CompiledTemplate *)self;
     NT_VM_free(op->vm);
     op->vm = NULL;
-    PyMem_Free(op);
+    PyObject_Free(op);
 }
 
 PyObject *NTPY_CompiledTemplate_render(PyObject *self, PyObject *data)

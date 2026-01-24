@@ -86,7 +86,7 @@ NT_VM *NT_VM_new(NT_Code *code, PyObject *serializer, PyObject *undefined)
         goto cleanup;
     }
 
-    stack = PyMem_Malloc(sizeof(PyObject *) * NT_VM_STACK_SIZE);
+    stack = PyMem_Calloc(NT_VM_STACK_SIZE, sizeof(PyObject *));
     if (!stack)
     {
         goto cleanup;
@@ -131,6 +131,7 @@ NT_VM *NT_VM_new(NT_Code *code, PyObject *serializer, PyObject *undefined)
     vm->buf = NULL;
 
     result = vm;
+    vm = NULL;
 
 cleanup:
     PyMem_Free(stack);
@@ -314,7 +315,7 @@ static int vm_noop(NT_VM *Py_UNUSED(vm), size_t *Py_UNUSED(ip),
     return 0;
 }
 
-static int vm_op_text(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_text(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
@@ -327,7 +328,7 @@ static int vm_op_text(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_render(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_render(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     PyObject *obj = vm_pop(vm);
     if (!obj)
@@ -337,14 +338,16 @@ static int vm_op_render(NT_VM *vm, size_t *ip, PyObject *data)
 
     if (vm_render(vm, obj) < 0)
     {
+        Py_DECREF(obj);
         return -1;
     }
 
+    Py_DECREF(obj);
     *ip += 1;
     return 0;
 }
 
-static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     PyObject *obj = vm_pop(vm);
     if (!obj)
@@ -364,7 +367,7 @@ static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
@@ -397,7 +400,7 @@ static int vm_op_global(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     int constant_index = vm_read_operand(vm, 2, *ip + 1);
 
@@ -409,23 +412,28 @@ static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *data)
 
     Py_DECREF(obj);
 
-    PyObject *new_obj = PyObject_GetItem(data, obj);
-    if (!obj)
+    PyObject *new_obj =
+        PyObject_GetItem(obj, vm->constant_pool[constant_index]);
+
+    if (!new_obj)
     {
         // TODO: undefined constructor.
         NTPY_TODO_I();
     }
 
-    if (vm_push(vm, obj) < 0)
+    if (vm_push(vm, new_obj) < 0)
     {
+        Py_DECREF(new_obj);
         return -1;
     }
+
+    Py_DECREF(new_obj);
 
     *ip += 3;
     return 0;
 }
 
-static int vm_op_pop(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_pop(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     PyObject *obj = vm_pop(vm);
     if (!obj)
@@ -433,17 +441,18 @@ static int vm_op_pop(NT_VM *vm, size_t *ip, PyObject *data)
         return -1;
     }
 
-    *ip++;
+    *ip += 1;
     return 0;
 }
 
-static int vm_op_jump(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_jump(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     *ip = vm_read_operand(vm, 2, *ip + 1);
     return 0;
 }
 
-static int vm_op_jump_if_falsy(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_jump_if_falsy(NT_VM *vm, size_t *ip,
+                               PyObject *Py_UNUSED(data))
 {
     size_t jump_pos = vm_read_operand(vm, 2, *ip + 1);
     PyObject *obj = vm_peek(vm);
@@ -460,7 +469,8 @@ static int vm_op_jump_if_falsy(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_jump_if_truthy(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_jump_if_truthy(NT_VM *vm, size_t *ip,
+                                PyObject *Py_UNUSED(data))
 {
     size_t jump_pos = vm_read_operand(vm, 2, *ip + 1);
     PyObject *obj = vm_peek(vm);
@@ -477,7 +487,7 @@ static int vm_op_jump_if_truthy(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_set_local(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_set_local(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     size_t local_index = vm_read_operand(vm, 1, *ip + 1);
 
@@ -493,7 +503,7 @@ static int vm_op_set_local(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_get_local(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_get_local(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     size_t depth = vm_read_operand(vm, 1, *ip + 1);
     size_t offset = vm_read_operand(vm, 1, *ip + 2);
@@ -508,7 +518,7 @@ static int vm_op_get_local(NT_VM *vm, size_t *ip, PyObject *data)
     return 0;
 }
 
-static int vm_op_iter_init(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_iter_init(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     PyObject *it = NULL;
 
@@ -534,11 +544,11 @@ static int vm_op_iter_init(NT_VM *vm, size_t *ip, PyObject *data)
 
     Py_DECREF(it);
 
-    *ip++;
+    *ip += 1;
     return 0;
 }
 
-static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     PyObject *it = vm->stack[vm->sp - 1];
 
@@ -569,10 +579,11 @@ static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *data)
         return -1;
     }
 
+    *ip += 1;
     return 0;
 }
 
-static int vm_op_enter_frame(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_enter_frame(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     int n_locals = vm_read_operand(vm, 1, vm->sp + 1);
 
@@ -583,35 +594,36 @@ static int vm_op_enter_frame(NT_VM *vm, size_t *ip, PyObject *data)
 
     vm->sp += n_locals;
     *ip += 2;
-}
-
-static int vm_op_leave_frame(NT_VM *vm, size_t *ip, PyObject *data)
-{
-    size_t frame = vm_pop_frame(vm);
-    vm->sp = frame;
-    *ip++;
     return 0;
 }
 
-static int vm_op_true(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_leave_frame(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
+{
+    size_t frame = vm_pop_frame(vm);
+    vm->sp = frame;
+    *ip += 1;
+    return 0;
+}
+
+static int vm_op_true(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     if (vm_push(vm, Py_True) < 0)
     {
         return -1;
     }
 
-    *ip++;
+    *ip += 1;
     return 0;
 }
 
-static int vm_op_false(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_op_false(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
     if (vm_push(vm, Py_False) < 0)
     {
         return -1;
     }
 
-    *ip++;
+    *ip += 1;
     return 0;
 }
 

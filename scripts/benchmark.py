@@ -8,6 +8,7 @@ from typing import Any
 
 from nano_template import parse
 from nano_template import render
+from nano_template import compile as compile_
 from nano_template._pure import Template as PyTemplate
 from nano_template._pure import render as py_render
 
@@ -41,8 +42,10 @@ class Fixture:
 _TESTS = {
     "parse c ext": "parse(source)",
     "parse pure py": "PyTemplate(source)",
+    "parse and compile c ext": "compile_(source)",
     "just render c ext": "t.render(data)",
     "just render pure py": "nt.render(data)",
+    "just run": "compiled_template.render(data)",
     # "just render jinja2": "jinja_template.render(**data)",
     # "just render minijinja": "minijinja_env.render_template('bench', **data)",
     "parse and render ext": "render(source, data)",
@@ -57,6 +60,7 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
     fixture = Fixture.load(Path(path))
     t = parse(fixture.source)
     nt = PyTemplate(fixture.source)
+    compiled_template = compile_(fixture.source)
 
     # minijinja_env = MiniJinjaEnv(templates={"bench": fixture.source})
 
@@ -69,6 +73,8 @@ def benchmark(path: str, number: int = 10000, repeat: int = 5) -> None:
         "render": render,
         "source": fixture.source,
         "t": t,
+        "compiled_template": compiled_template,
+        "compile_": compile_,
         # "render_str": render_str,
         # "JinjaTemplate": JinjaTemplate,
         # "jinja_env": JinjaEnvironment(cache_size=0, bytecode_cache=None),

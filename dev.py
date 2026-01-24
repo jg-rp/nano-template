@@ -1,19 +1,15 @@
-from typing import Any
+import json
 
 import nano_template as nt
-from nano_template import _bytecode
+from nano_template import render
 
+with open("tests/fixtures/001/template.txt") as fd:
+    source = fd.read()
 
-import tests._bytecode as code
-
-source = "{% for x in y %}{{ x }}{% else %}foo{% endfor %}"
-data: dict[str, Any] = {"y": 42}
-
-bytecode = _bytecode(source)
-# print(bytecode.instructions)
-# print(bytecode.constants)
-
-print(code.to_str(bytecode.instructions))
+with open("tests/fixtures/001/data.json") as fd:
+    data = json.load(fd)
 
 template = nt.compile(source)
-print(template.render(data))
+result = template.render(data)
+
+assert result == render(source, data)

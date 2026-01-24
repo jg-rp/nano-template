@@ -47,7 +47,7 @@ static OpFn vm_op_table[] = {
 };
 
 /// @brief Read a single operand at offset `offset`.
-static u_int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset);
+static size_t vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset);
 
 /// @brief Write `obj` to the output buffer.
 static int vm_render(NT_VM *vm, PyObject *obj);
@@ -234,11 +234,11 @@ PyObject *NT_VM_join(NT_VM *vm)
     return result;
 }
 
-u_int vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset)
+size_t vm_read_operand(NT_VM *vm, uint8_t byte_count, size_t offset)
 {
     assert(offset + byte_count - 1 < vm->instructions_size);
 
-    u_int value = 0;
+    size_t value = 0;
     for (int i = 0; i < byte_count; i++)
     {
         value = (value << 8) | vm->instructions[offset + i];
@@ -318,7 +318,7 @@ static int vm_noop(NT_VM *Py_UNUSED(vm), size_t *Py_UNUSED(ip),
 
 static int vm_op_text(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    size_t constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     if (vm_render(vm, vm->constant_pool[constant_index]) < 0)
     {
@@ -370,7 +370,7 @@ static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    size_t constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     if (vm_push(vm, vm->constant_pool[constant_index]) < 0)
     {
@@ -383,7 +383,7 @@ static int vm_op_constant(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_global(NT_VM *vm, size_t *ip, PyObject *data)
 {
-    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    size_t constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     PyObject *obj = PyObject_GetItem(data, vm->constant_pool[constant_index]);
     if (!obj)
@@ -403,7 +403,7 @@ static int vm_op_global(NT_VM *vm, size_t *ip, PyObject *data)
 
 static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    u_int constant_index = vm_read_operand(vm, 2, *ip + 1);
+    size_t constant_index = vm_read_operand(vm, 2, *ip + 1);
 
     PyObject *obj = vm_pop(vm);
     if (!obj)
@@ -589,7 +589,7 @@ static int vm_op_iter_next(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 
 static int vm_op_enter_frame(NT_VM *vm, size_t *ip, PyObject *Py_UNUSED(data))
 {
-    u_int n_locals = vm_read_operand(vm, 1, *ip + 1);
+    size_t n_locals = vm_read_operand(vm, 1, *ip + 1);
 
     if (vm_push_frame(vm, vm->sp) < 0)
     {

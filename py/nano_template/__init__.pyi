@@ -3,6 +3,7 @@ from typing import Any
 from typing import Callable
 from typing import Type
 
+from ._nano_template import CompiledTemplate
 from ._nano_template import Template
 from ._nano_template import BytecodeView as _BytecodeView
 from ._nano_template import TokenView as _TokenView
@@ -22,6 +23,8 @@ __all__ = (
     "_tokenize",
     "_TokenKind",
     "_TokenView",
+    "compile",
+    "compile_and_render",
     "parse",
     "render",
     "serialize",
@@ -41,7 +44,20 @@ def parse(
     serializer: Callable[[object], str] = serialize,
     undefined: Type[Undefined] = Undefined,
 ) -> Template: ...
+def compile(
+    source: str,
+    *,
+    serializer: Callable[[object], str] = serialize,
+    undefined: Type[Undefined] = Undefined,
+) -> CompiledTemplate: ...
 def render(
+    source: str,
+    data: Mapping[str, Any],
+    *,
+    serializer: Callable[[object], str] = serialize,
+    undefined: Type[Undefined] = Undefined,
+) -> str: ...
+def compile_and_render(
     source: str,
     data: Mapping[str, Any],
     *,

@@ -77,9 +77,9 @@ NT_VM *NT_VM_new(NT_Code *code, PyObject *serializer, PyObject *undefined)
     NT_VM *result = NULL;
     NT_VM *vm = NULL;
     PyObject **stack = NULL;
-    size_t **frames = NULL;
+    size_t *frames = NULL;
 
-    NT_VM *vm = PyMem_Malloc(sizeof(NT_VM));
+    vm = PyMem_Malloc(sizeof(NT_VM));
     if (!vm)
     {
         PyErr_NoMemory();
@@ -208,13 +208,13 @@ int NT_VM_run(NT_VM *vm, PyObject *data)
     while (ip < length)
     {
         op = vm->instructions[ip];
-        assert(op >= NT_OP_NULL && NT_OP_TRUE);
+        assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
 
         OpFn fn = vm_op_table[op];
         if (!fn)
         {
             PyErr_Format(PyExc_RuntimeError, "unknown opcode %d", op);
-            return NULL;
+            return -1;
         }
 
         if (fn(vm, &ip, data) < 0)
@@ -222,6 +222,8 @@ int NT_VM_run(NT_VM *vm, PyObject *data)
             return -1;
         }
     }
+
+    return 0;
 }
 
 PyObject *NT_VM_join(NT_VM *vm)
@@ -286,7 +288,7 @@ static PyObject *vm_pop(NT_VM *vm)
 
 static PyObject *vm_peek(NT_VM *vm)
 {
-    vm->stack[vm->sp - 1];
+    return vm->stack[vm->sp - 1];
 }
 
 static size_t vm_current_frame(NT_VM *vm)
@@ -306,7 +308,8 @@ static size_t vm_pop_frame(NT_VM *vm)
     return vm->frames[--vm->fp];
 }
 
-static int vm_noop(NT_VM *vm, size_t *ip, PyObject *data)
+static int vm_noop(NT_VM *Py_UNUSED(vm), size_t *Py_UNUSED(ip),
+                   PyObject *Py_UNUSED(data))
 {
     return 0;
 }
@@ -349,10 +352,10 @@ static int vm_op_not(NT_VM *vm, size_t *ip, PyObject *data)
         return -1;
     }
 
-    int not_obj = PyObject_IsFalse(obj);
+    int true_obj = PyObject_IsTrue(obj);
     Py_DECREF(obj);
 
-    if (vm_push(vm, not_obj ? Py_True : Py_False) < 0)
+    if (vm_push(vm, true_obj ? Py_False : Py_True) < 0)
     {
         return -1;
     }
@@ -424,9 +427,14 @@ static int vm_op_selector(NT_VM *vm, size_t *ip, PyObject *data)
 
 static int vm_op_pop(NT_VM *vm, size_t *ip, PyObject *data)
 {
-    int result = vm_pop(vm);
+    PyObject *obj = vm_pop(vm);
+    if (!obj)
+    {
+        return -1;
+    }
+
     *ip++;
-    return result;
+    return 0;
 }
 
 static int vm_op_jump(NT_VM *vm, size_t *ip, PyObject *data)
@@ -439,7 +447,16 @@ static int vm_op_jump_if_falsy(NT_VM *vm, size_t *ip, PyObject *data)
 {
     size_t jump_pos = vm_read_operand(vm, 2, *ip + 1);
     PyObject *obj = vm_peek(vm);
-    *ip = PyObject_IsFalse(obj) ? jump_pos : ip + 3;
+
+    if (PyObject_IsTrue(obj))
+    {
+        *ip += 3;
+    }
+    else
+    {
+        *ip = jump_pos;
+    }
+
     return 0;
 }
 
@@ -447,7 +464,16 @@ static int vm_op_jump_if_truthy(NT_VM *vm, size_t *ip, PyObject *data)
 {
     size_t jump_pos = vm_read_operand(vm, 2, *ip + 1);
     PyObject *obj = vm_peek(vm);
-    *ip = PyObject_IsTrue(obj) ? jump_pos : ip + 3;
+
+    if (PyObject_IsTrue(obj))
+    {
+        *ip = jump_pos;
+    }
+    else
+    {
+        *ip += 3;
+    }
+
     return 0;
 }
 

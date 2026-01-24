@@ -22,11 +22,19 @@ def tokenize(source: str) -> list[TokenView]: ...
 class Template:
     def render(self, data: Mapping[str, object]) -> str: ...
 
+class CompiledTemplate:
+    def render(self, data: Mapping[str, object]) -> str: ...
+
 def parse(
     source: str,
     serializer: Callable[[object], str],
     undefined: Type[Undefined],
 ) -> Template: ...
+def compile(
+    source: str,
+    serializer: Callable[[object], str],
+    undefined: Type[Undefined],
+) -> CompiledTemplate: ...
 
 class BytecodeView:
     """Bytecode instructions and constant pool."""

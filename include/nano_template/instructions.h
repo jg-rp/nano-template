@@ -5,6 +5,7 @@
 
 #include "nano_template/common.h"
 
+#define NT_OP_COUNT 19
 #define MAX_OPERANDS 2
 
 /// @brief Opcodes for our virtual machine.
@@ -42,7 +43,7 @@ typedef struct NT_OpDef
 
 /// @brief A table of opcode constants and their definitions.
 /// Remember to update NTPY_bytecode_definitions if you change this.
-static NT_OpDef code_defs[] = {
+static NT_OpDef NT_Ins_defs[] = {
     [NT_OP_NULL] = {"OpNull", {0, 0}, 0, 1},
     [NT_OP_CONSTANT] = {"OpConstant", {2, 0}, 1, 3},
     [NT_OP_ENTER_FRAME] = {"OpEnterFrame", {1, 0}, 1, 2},
@@ -63,6 +64,12 @@ static NT_OpDef code_defs[] = {
     [NT_OP_TEXT] = {"OpText", {2, 0}, 1, 3},
     [NT_OP_TRUE] = {"OpTrue", {0, 0}, 0, 1},
 };
+
+/// @brief Return a string representation of `op`.
+static inline const char *NT_Ins_str(NT_Op op)
+{
+    return NT_Ins_defs[op].name;
+}
 
 /// @brief Bytecode instructions.
 typedef struct NT_Ins

@@ -130,7 +130,7 @@ PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self),
     PyObject *def = NULL;
     PyObject *widths = NULL;
 
-    PyObject *defs = PyList_New(19);
+    PyObject *defs = PyList_New(NT_OP_COUNT);
     if (!defs)
     {
         return NULL;
@@ -138,7 +138,7 @@ PyObject *NTPY_bytecode_definitions(PyObject *Py_UNUSED(self),
 
     for (NT_Op op = NT_OP_NULL; op <= NT_OP_TRUE; op++)
     {
-        NT_OpDef op_def = code_defs[op];
+        NT_OpDef op_def = NT_Ins_defs[op];
 
         widths = Py_BuildValue("(BB)", op_def.operand_widths[0],
                                op_def.operand_widths[1]);

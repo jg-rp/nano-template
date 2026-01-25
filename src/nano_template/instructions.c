@@ -62,7 +62,7 @@ int NT_Ins_pack(NT_Ins *ins, NT_Op op)
 int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-    NT_OpDef op_def = code_defs[op];
+    NT_OpDef op_def = NT_Ins_defs[op];
 
     if (code_write_byte(ins, op) < 0)
     {
@@ -80,7 +80,7 @@ int NT_Ins_pack1(NT_Ins *ins, NT_Op op, int operand)
 int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos)
 {
     assert(ins->bytes[pos] == op);
-    NT_OpDef op_def = code_defs[op];
+    NT_OpDef op_def = NT_Ins_defs[op];
 
     assert(op_def.operand_widths[0] != 0);
     assert(op_def.operand_count == 1);
@@ -100,7 +100,7 @@ int NT_Ins_replace(NT_Ins *ins, NT_Op op, int operand, size_t pos)
 int NT_Ins_pack2(NT_Ins *ins, NT_Op op, int op1, int op2)
 {
     assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-    NT_OpDef op_def = code_defs[op];
+    NT_OpDef op_def = NT_Ins_defs[op];
 
     assert(op_def.operand_count == 2);
 

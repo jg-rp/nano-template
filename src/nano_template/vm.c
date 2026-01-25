@@ -66,7 +66,7 @@ static PyObject *vm_peek(NT_VM *vm);
 
 /// @brief Get an iterator for `obj`.
 /// @return 0 on success, -1 on error with an exception set.
-static int vm_iter(PyObject *obj, PyObject **out_iter);
+static int vm_iter(PyObject *op, PyObject **out_iter);
 
 static size_t vm_current_frame(NT_VM *vm);
 static int vm_push_frame(NT_VM *vm, size_t frame);
@@ -209,8 +209,6 @@ int NT_VM_run(NT_VM *vm, PyObject *data)
     while (ip < length)
     {
         op = vm->instructions[ip];
-        assert(op >= NT_OP_NULL && op <= NT_OP_TRUE);
-
         OpFn fn = vm_op_table[op];
         if (!fn)
         {

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+#include "nano_template/py_bytecode_view.h"
+#include "nano_template/py_compile.h"
+#include "nano_template/py_compiled_template.h"
 #include "nano_template/py_parse.h"
 #include "nano_template/py_template.h"
 #include "nano_template/py_token_view.h"
@@ -9,8 +12,14 @@
 static PyMethodDef nano_template_methods[] = {
     {"parse", (PyCFunction)parse, METH_VARARGS,
      PyDoc_STR("parse(str) -> Template")},
+    {"compile", (PyCFunction)nt_compile, METH_VARARGS,
+     PyDoc_STR("compile(str) -> CompiledTemplate")},
     {"tokenize", tokenize, METH_O,
      PyDoc_STR("tokenize(str) -> list[TokenView]")},
+    {"bytecode", NTPY_bytecode, METH_O,
+     PyDoc_STR("bytecode(str) -> BytecodeView")},
+    {"bytecode_definitions", NTPY_bytecode_definitions, METH_NOARGS,
+     PyDoc_STR("bytecode_definitions() -> list[OpDef]")},
     {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef nano_template_module = {
@@ -38,6 +47,18 @@ PyMODINIT_FUNC PyInit__nano_template(void)
     }
 
     if (nt_register_template_type(mod) < 0)
+    {
+        Py_DECREF(mod);
+        return NULL;
+    }
+
+    if (nt_register_compiled_template_type(mod) < 0)
+    {
+        Py_DECREF(mod);
+        return NULL;
+    }
+
+    if (nt_register_bytecode_view_type(mod) < 0)
     {
         Py_DECREF(mod);
         return NULL;

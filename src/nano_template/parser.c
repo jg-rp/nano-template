@@ -176,6 +176,7 @@ static NT_Node *NT_Parser_make_node(NT_Parser *p, NT_NodeKind kind)
     node->expr = NULL;
     node->head = NULL;
     node->tail = NULL;
+    node->child_count = 0;
     node->str = NULL;
     return node;
 }
@@ -212,6 +213,7 @@ static int NT_Parser_add_node(NT_Parser *p, NT_Node *parent, NT_Node *child)
 
     NT_NodePage *page = parent->tail;
     page->nodes[page->count++] = child;
+    parent->child_count++;
     return 0;
 }
 
@@ -249,7 +251,7 @@ static int NT_Parser_add_obj(NT_Parser *p, NT_Expr *expr, PyObject *obj)
         expr->tail = page;
     }
 
-    if (expr->tail->count == NT_OBJ_PRE_PAGE)
+    if (expr->tail->count == NT_OBJ_PER_PAGE)
     {
         NT_ObjPage *new_page = NT_Mem_alloc(p->mem, sizeof(NT_ObjPage));
         if (!new_page)
@@ -549,7 +551,7 @@ static NT_Node *NT_Parser_parse_output(NT_Parser *p)
         return NULL;
     }
 
-    NT_Node *node = NT_Parser_make_node(p, NODE_OUPUT);
+    NT_Node *node = NT_Parser_make_node(p, NODE_OUTPUT);
     if (!node)
     {
         return NULL;

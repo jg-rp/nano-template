@@ -1,28 +1,15 @@
 import json
-from nano_template import parse
 
-import gc
-
-# gc.set_debug(gc.DEBUG_LEAK)
-# gc.set_debug(gc.DEBUG_SAVEALL)
-
-with open("tests/fixtures/001/data.json") as fd:
-    data = json.load(fd)
+import nano_template as nt
+from nano_template import render
 
 with open("tests/fixtures/001/template.txt") as fd:
     source = fd.read()
 
-gc.disable()
-gc.collect()
-before = len(gc.get_objects())
+with open("tests/fixtures/001/data.json") as fd:
+    data = json.load(fd)
 
-parse(source).render(data)
+template = nt.compile(source)
+result = template.render(data)
 
-gc.collect()
-after = len(gc.get_objects())
-print("Object delta:", after - before)
-gc.enable()
-
-# leaked = [o for o in gc.garbage if type(o).__module__ == "_nano_template"]
-# for o in leaked:
-#     print(o, type(o))
+assert result == render(source, data)

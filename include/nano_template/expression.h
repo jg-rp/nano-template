@@ -7,7 +7,7 @@
 #include "nano_template/context.h"
 #include "nano_template/token.h"
 
-#define NT_OBJ_PRE_PAGE 4
+#define NT_OBJ_PER_PAGE 4
 
 typedef enum
 {
@@ -25,9 +25,17 @@ typedef struct NT_ObjPage
 {
     struct NT_ObjPage *next;
     size_t count;
-    PyObject *objs[NT_OBJ_PRE_PAGE];
+    PyObject *objs[NT_OBJ_PER_PAGE];
 } NT_ObjPage;
 
+/// @brief A basic or compound expression.
+///
+/// Conceptually, both NT_Node and NT_Expr are nodes in the AST. Tags, the
+/// output statement and raw text are of type NT_Node. If a node has an
+/// expression, the expression is of type NT_Expr.
+///
+/// Nodes have zero or one expressions. A compound expression, like `EXPR_AND`,
+/// has two child expressions.
 typedef struct NT_Expr
 {
     // Child expressions, like the left and right hand side of the `or`
